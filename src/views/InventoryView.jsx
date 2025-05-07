@@ -3,13 +3,27 @@ import axios from '../axios';
 import ItemAddForm from '../components/ItemAddForm';
 import ItemImport from '../components/ItemImport';
 import ItemEditForm from '../components/ItemEditForm';
+import ItemWriteOffModal from '../components/ItemWriteOffModal';
 
 const InventoryView = () => {
     const [items, setItems] = useState([]);
     const [error, setError] = useState(null);
-    const [showImportModal, setShowImportModal] = useState(false); // ← čia turi būti
+    const [showImportModal, setShowImportModal] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [showWriteOffModal, setShowWriteOffModal] = useState(false);
+
+    const handleSelect = (itemId) => {
+        setSelectedItems(prev =>
+            prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+        );
+    };
+
+    const handleWriteOffConfirmed = (writeOffIds) => {
+        setItems(prev => prev.filter(item => !writeOffIds.includes(item.id_Item)));
+        setSelectedItems([]);
+    };
 
     const handleEdit = (item) => {
         setSelectedItem(item);
@@ -25,9 +39,7 @@ const InventoryView = () => {
             try {
                 const token = localStorage.getItem('authToken');
                 const response = await axios.get('/items', {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                    headers: { Authorization: `Bearer ${token}` }
                 });
                 setItems(response.data);
             } catch (err) {
@@ -46,9 +58,19 @@ const InventoryView = () => {
 
             <ItemAddForm onItemAdded={(newItem) => setItems(prev => [...prev, newItem])} />
 
-            <button className="btn btn-primary mb-3" onClick={() => setShowImportModal(true)}>
-                Importuoti iš Excel
-            </button>
+            <div className="d-flex gap-2 mb-3">
+                <button className="btn btn-primary" onClick={() => setShowImportModal(true)}>
+                    Importuoti iš Excel
+                </button>
+
+                <button
+                    className="btn btn-danger"
+                    onClick={() => setShowWriteOffModal(true)}
+                    disabled={selectedItems.length === 0}
+                >
+                    Nurašyti pasirinktus daiktus
+                </button>
+            </div>
 
             <ItemImport
                 show={showImportModal}
@@ -65,6 +87,7 @@ const InventoryView = () => {
                 <table className="table table-bordered mt-3">
                     <thead>
                     <tr>
+                        <th>Pasirinkti</th>
                         <th>Pavadinimas</th>
                         <th>Aprašymas</th>
                         <th>Kaina</th>
@@ -77,6 +100,13 @@ const InventoryView = () => {
                     <tbody>
                     {items.map((item) => (
                         <tr key={item.id_Item}>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedItems.includes(item.id_Item)}
+                                    onChange={() => handleSelect(item.id_Item)}
+                                />
+                            </td>
                             <td>{item.Name}</td>
                             <td>{item.Description}</td>
                             <td>{item.Price}</td>
@@ -84,7 +114,10 @@ const InventoryView = () => {
                             <td>{item.Quantity}</td>
                             <td>{item.UnitOfMeasure}</td>
                             <td>
-                                <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(item)}>
+                                <button
+                                    className="btn btn-sm btn-warning"
+                                    onClick={() => handleEdit(item)}
+                                >
                                     Redaguoti
                                 </button>
                             </td>
@@ -92,7 +125,6 @@ const InventoryView = () => {
                     ))}
                     </tbody>
                 </table>
-
             )}
 
             <ItemEditForm
@@ -102,6 +134,13 @@ const InventoryView = () => {
                 onItemUpdated={handleItemUpdated}
             />
 
+            <ItemWriteOffModal
+                show={showWriteOffModal}
+                onClose={() => setShowWriteOffModal(false)}
+                selectedItemIds={selectedItems}
+                allItems={items}
+                onConfirm={handleWriteOffConfirmed}
+            />
         </div>
     );
 };
