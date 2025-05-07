@@ -2,11 +2,23 @@ import React, { useEffect, useState } from 'react';
 import axios from '../axios';
 import ItemAddForm from '../components/ItemAddForm';
 import ItemImport from '../components/ItemImport';
+import ItemEditForm from '../components/ItemEditForm';
 
 const InventoryView = () => {
     const [items, setItems] = useState([]);
     const [error, setError] = useState(null);
     const [showImportModal, setShowImportModal] = useState(false); // ← čia turi būti
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+
+    const handleEdit = (item) => {
+        setSelectedItem(item);
+        setShowEditModal(true);
+    };
+
+    const handleItemUpdated = (updatedItem) => {
+        setItems(prev => prev.map(i => i.id_Item === updatedItem.id_Item ? updatedItem : i));
+    };
 
     useEffect(() => {
         const fetchItems = async () => {
@@ -52,29 +64,44 @@ const InventoryView = () => {
             ) : (
                 <table className="table table-bordered mt-3">
                     <thead>
-                        <tr>
-                            <th>Pavadinimas</th>
-                            <th>Aprašymas</th>
-                            <th>Kaina</th>
-                            <th>Inventoriaus kodas</th>
-                            <th>Kiekis</th>
-                            <th>Matavimo vnt.</th>
-                        </tr>
+                    <tr>
+                        <th>Pavadinimas</th>
+                        <th>Aprašymas</th>
+                        <th>Kaina</th>
+                        <th>Inventoriaus kodas</th>
+                        <th>Kiekis</th>
+                        <th>Matavimo vnt.</th>
+                        <th>Veiksmai</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        {items.map((item) => (
-                            <tr key={item.id_Item}>
-                                <td>{item.Name}</td>
-                                <td>{item.Description}</td>
-                                <td>{item.Price}</td>
-                                <td>{item.InventoryNumber}</td>
-                                <td>{item.Quantity}</td>
-                                <td>{item.UnitOfMeasure}</td>
-                            </tr>
-                        ))}
+                    {items.map((item) => (
+                        <tr key={item.id_Item}>
+                            <td>{item.Name}</td>
+                            <td>{item.Description}</td>
+                            <td>{item.Price}</td>
+                            <td>{item.InventoryNumber}</td>
+                            <td>{item.Quantity}</td>
+                            <td>{item.UnitOfMeasure}</td>
+                            <td>
+                                <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(item)}>
+                                    Redaguoti
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
                     </tbody>
                 </table>
+
             )}
+
+            <ItemEditForm
+                show={showEditModal}
+                item={selectedItem}
+                onClose={() => setShowEditModal(false)}
+                onItemUpdated={handleItemUpdated}
+            />
+
         </div>
     );
 };
