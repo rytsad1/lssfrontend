@@ -21,6 +21,12 @@ const NavBar = () => {
                     <li className="nav-item">
                         <Link className="nav-link" to="/inventory">Inventorius</Link>
                     </li>
+                    <li className="nav-item">
+                        <Link className="nav-link" to="/orders">Užsakymas</Link>
+                    </li>
+                    <li className="nav-item">
+                        <Link className="nav-link" to="/orderhistory">Užsakymų istorija</Link>
+                    </li>
                 </ul>
                 <ul className="navbar-nav">
                     {isAuthenticated() ? (
