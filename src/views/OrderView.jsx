@@ -33,26 +33,26 @@ const OrderView = () => {
       <h2>Užsakymų sąrašas</h2>
       <OrderCreateComponent onSuccess={fetchOrders} />
       <table className="table mt-4">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Data</th>
-            <th>Naudotojas</th>
-            <th>Tipas</th>
-            <th>Statusas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map(order => (
-            <tr key={order.id_Order}>
-              <td>{order.id_Order}</td>
-              <td>{order.Date}</td>
-              <td>{order.user?.Name} {order.user?.Surname}</td>
-              <td>{order.orderType?.name}</td>
-              <td>{order.orderStatus?.name}</td>
-            </tr>
-          ))}
-        </tbody>
+        {/*<thead>*/}
+        {/*  <tr>*/}
+        {/*    <th>ID</th>*/}
+        {/*    <th>Data</th>*/}
+        {/*    <th>Naudotojas</th>*/}
+        {/*    <th>Tipas</th>*/}
+        {/*    <th>Statusas</th>*/}
+        {/*  </tr>*/}
+        {/*</thead>*/}
+        {/*<tbody>*/}
+        {/*  {orders.map(order => (*/}
+        {/*    <tr key={order.id_Order}>*/}
+        {/*      <td>{order.id_Order}</td>*/}
+        {/*      <td>{order.Date}</td>*/}
+        {/*      <td>{order.user?.Name} {order.user?.Surname}</td>*/}
+        {/*      <td>{order.orderType?.name}</td>*/}
+        {/*      <td>{order.orderStatus?.name}</td>*/}
+        {/*    </tr>*/}
+        {/*  ))}*/}
+        {/*</tbody>*/}
       </table>
     </div>
   );

@@ -7,6 +7,7 @@ import InventoryView from './views/InventoryView';
 import UserManagmentView from './views/UserManagmentView';
 import OrderView from './views/OrderView';
 import OrderHistoryView from './views/OrderHistoryView';
+import OrderManagementView from './views/OrderManagementView';
 import { isAuthenticated } from './auth';
 
 const PrivateRoute = ({ children }) => {
@@ -20,6 +21,7 @@ const AppRouter = () => (
         <Route path="/users" element={<UserManagmentView />} />
          <Route path="/orders" element={<OrderView />} />
         <Route path="/orderhistory" element={<OrderHistoryView />} />
+        <Route path="/ordermanagement" element={<OrderManagementView />} />
         <Route path="/" element={
                 <PrivateRoute>
                     <HomeView />
