@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../axios';
-import { format } from 'date-fns';
 
 const ItemWriteOffModal = ({ show, onClose, selectedItemIds, allItems, onConfirm }) => {
     const [quantities, setQuantities] = useState({});
@@ -48,8 +47,12 @@ const ItemWriteOffModal = ({ show, onClose, selectedItemIds, allItems, onConfirm
 
             const downloadUrl = response.data.file;
             if (downloadUrl) {
-                // Automatinis atsisiuntimas atidarant failą naujame lange
-                window.open(downloadUrl, '_blank');
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = ''; // leis naršyklei automatiškai parsiųsti
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
 
             onConfirm(payload.map(p => p.id));
