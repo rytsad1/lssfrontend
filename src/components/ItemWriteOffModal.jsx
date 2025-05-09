@@ -48,11 +48,8 @@ const ItemWriteOffModal = ({ show, onClose, selectedItemIds, allItems, onConfirm
 
             const downloadUrl = response.data.file;
             if (downloadUrl) {
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = `${format(new Date(), 'yyyy-MM-dd')} Nurasymo aktas.xlsx`;
-                link.target = '_blank';
-                link.click();
+                // Automatinis atsisiuntimas atidarant failą naujame lange
+                window.open(downloadUrl, '_blank');
             }
 
             onConfirm(payload.map(p => p.id));
