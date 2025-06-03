@@ -36,6 +36,9 @@ const NavBar = () => {
                     <li className="nav-item">
                         <Link className="nav-link" to="/writeofflog">Nurašymai</Link>
                     </li>
+                    <li className="nav-item">
+                        <Link className="nav-link" to="/issue">Išdavimai</Link>
+                    </li>
                 </ul>
                 <ul className="navbar-nav">
                     {isAuthenticated() ? (

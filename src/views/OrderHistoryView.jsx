@@ -1,4 +1,3 @@
-// src/components/OrderHistoryView.jsx
 import React, { useEffect, useState } from 'react';
 import axios from '../axios';
 import { toast } from 'react-toastify';
@@ -36,6 +35,19 @@ const OrderHistoryView = () => {
         }
     };
 
+    const translateOrderStatus = (status) => {
+        switch (status) {
+            case 'Waiting':
+                return 'Laukiama';
+            case 'Issued':
+                return 'Patvirtinta';
+            case 'Rejected':
+                return 'Atmesta';
+            default:
+                return status || '-';
+        }
+    };
+
     if (error) return <p>{error}</p>;
 
     return (
@@ -46,32 +58,32 @@ const OrderHistoryView = () => {
             ) : (
                 <table className="table table-bordered">
                     <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Veiksmas</th>
-                            <th>Komentaras</th>
-                            <th>Naudotojas</th>
-                            <th>Tipas</th>
-                            <th>Užsakyti daiktai</th>
-                        </tr>
+                    <tr>
+                        <th>Data</th>
+                        <th>Būsena</th>
+                        <th>Komentaras</th>
+                        <th>Naudotojas</th>
+                        <th>Tipas</th>
+                        <th>Užsakyti daiktai</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        {history.map(h => (
-                            <tr key={h.id_OrderHistory}>
-                                <td>{h.Date}</td>
-                                <td>{h.Action}</td>
-                                <td>{h.Comment}</td>
-                                <td>{h.performed_by?.Name} ({h.performed_by?.Email})</td>
-                                <td>{translateOrderType(h.order?.OrderType)}</td>
-                                <td>
-                                    {h.order?.OrderItems?.map((item, idx) => (
-                                        <div key={idx}>
-                                            {item.Name} ({item.InventoryNumber}) – {item.Quantity} vnt.
-                                        </div>
-                                    ))}
-                                </td>
-                            </tr>
-                        ))}
+                    {history.map(h => (
+                        <tr key={h.id_OrderHistory}>
+                            <td>{h.Date}</td>
+                            <td>{translateOrderStatus(h.order?.OrderStatus)}</td>
+                            <td>{h.Comment}</td>
+                            <td>{h.performed_by?.Name} ({h.performed_by?.Email})</td>
+                            <td>{translateOrderType(h.order?.OrderType)}</td>
+                            <td>
+                                {h.order?.OrderItems?.map((item, idx) => (
+                                    <div key={idx}>
+                                        {item.Name} ({item.InventoryNumber}) – {item.Quantity} vnt.
+                                    </div>
+                                ))}
+                            </td>
+                        </tr>
+                    ))}
                     </tbody>
                 </table>
             )}
