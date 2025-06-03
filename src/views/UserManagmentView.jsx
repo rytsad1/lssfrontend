@@ -14,7 +14,8 @@ const UserManagementView = () => {
 
     const fetchUsers = async () => {
         const response = await axios.get('/users', { headers });
-        setUsers(response.data.data);
+        console.log('users:', response.data);
+        setUsers(response.data.data || []);
     };
 
     const fetchRoles = async () => {

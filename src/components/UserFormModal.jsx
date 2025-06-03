@@ -7,24 +7,24 @@ const UserFormModal = ({ show, user, onClose, onSuccess }) => {
     const [surname, setSurname] = useState('');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
-    const [Password, setPassword] = useState('');
+    const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [roles, setRoles] = useState([]);
-    const [permissions, setPermissions] = useState([]);
-    const [selectedRoleId, setSelectedRoleId] = useState(null);
-    const [selectedPermissionIds, setSelectedPermissionIds] = useState([]);
+    const [selectedRoleIds, setSelectedRoleIds] = useState([]);
 
     useEffect(() => {
         const token = localStorage.getItem('authToken');
-        const fetchData = async () => {
-            const [rolesRes, permissionsRes] = await Promise.all([
-                axios.get('/roles', { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get('/permissions', { headers: { Authorization: `Bearer ${token}` } })
-            ]);
-            setRoles(rolesRes.data.data || []);
-            setPermissions(permissionsRes.data.data || []);
+        const fetchRoles = async () => {
+            try {
+                const res = await axios.get('/roles', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setRoles(res.data.data || []);
+            } catch (error) {
+                toast.error('Nepavyko gauti rolių.');
+            }
         };
-        if (show) fetchData();
+        if (show) fetchRoles();
     }, [show]);
 
     useEffect(() => {
@@ -35,29 +35,28 @@ const UserFormModal = ({ show, user, onClose, onSuccess }) => {
             setEmail(user.Email || '');
             setPassword('');
             setConfirmPassword('');
-            if (user.user_roles && user.user_roles[0]) {
-                setSelectedRoleId(user.user_roles[0].role?.id_Role || null);
-                const permissionIds = user.user_roles[0].role?.role_permissions
-                    ?.map(rp => rp.permission?.id_Permission)
-                    ?.filter(id => id != null) || [];
-                setSelectedPermissionIds(permissionIds);
-            }
+
+            const roleIds = user.user_roles?.map(ur => ur.fkRoleid_Role) || [];
+            setSelectedRoleIds(roleIds);
         } else {
-            setName('');
-            setSurname('');
-            setUsername('');
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
-            setSelectedRoleId(null);
-            setSelectedPermissionIds([]);
+            resetForm();
         }
     }, [user]);
 
-    const handleCheckboxChange = (id) => {
-        setSelectedPermissionIds(prev =>
+    const resetForm = () => {
+        setName('');
+        setSurname('');
+        setUsername('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setSelectedRoleIds([]);
+    };
+
+    const handleRoleToggle = (id) => {
+        setSelectedRoleIds(prev =>
             prev.includes(id)
-                ? prev.filter(pid => pid !== id)
+                ? prev.filter(rid => rid !== id)
                 : [...prev, id]
         );
     };
@@ -69,11 +68,9 @@ const UserFormModal = ({ show, user, onClose, onSuccess }) => {
             Surname: surname,
             Username: username,
             Email: email,
-            Password: Password || undefined,
+            Password: password || undefined,
             Password_confirmation: confirmPassword || undefined,
-            RoleId: selectedRoleId,
-            PermissionIds: selectedPermissionIds.filter(id => id != null),
-
+            RoleIds: selectedRoleIds
         };
 
         try {
@@ -126,7 +123,7 @@ const UserFormModal = ({ show, user, onClose, onSuccess }) => {
                             <>
                                 <div className="mb-3">
                                     <label>Slaptažodis</label>
-                                    <input type="password" className="form-control" value={Password} onChange={e => setPassword(e.target.value)} />
+                                    <input type="password" className="form-control" value={password} onChange={e => setPassword(e.target.value)} />
                                 </div>
                                 <div className="mb-3">
                                     <label>Pakartoti slaptažodį</label>
@@ -135,27 +132,18 @@ const UserFormModal = ({ show, user, onClose, onSuccess }) => {
                             </>
                         )}
                         <div className="mb-3">
-                            <label>Rolė</label>
-                            <select className="form-select" value={selectedRoleId || ''} onChange={e => setSelectedRoleId(Number(e.target.value))}>
-                                <option value="">Pasirinkite rolę</option>
-                                {roles.map(role => (
-                                    <option key={role.id_Role} value={role.id_Role}>{role.Name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="mb-3">
-                            <label>Teisės</label>
-                            {permissions.map(perm => (
-                                <div key={perm.id_Premission} className="form-check">
+                            <label>Rolės</label>
+                            {roles.map(role => (
+                                <div key={role.id_Role} className="form-check">
                                     <input
                                         type="checkbox"
                                         className="form-check-input"
-                                        id={`perm-${perm.id_Premission}`}
-                                        checked={selectedPermissionIds.includes(perm.id_Premission)}
-                                        onChange={() => handleCheckboxChange(perm.id_Premission)}
+                                        id={`role-${role.id_Role}`}
+                                        checked={selectedRoleIds.includes(role.id_Role)}
+                                        onChange={() => handleRoleToggle(role.id_Role)}
                                     />
-                                    <label className="form-check-label" htmlFor={`perm-${perm.id_Premission}`}>
-                                        {perm.Name}
+                                    <label className="form-check-label" htmlFor={`role-${role.id_Role}`}>
+                                        {role.Name}
                                     </label>
                                 </div>
                             ))}

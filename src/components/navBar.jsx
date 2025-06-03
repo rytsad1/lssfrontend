@@ -30,11 +30,17 @@ const NavBar = () => {
                     <li className="nav-item">
                         <Link className="nav-link" to="/ordermanagement">Užsakymų valdymas</Link>
                     </li>
+                    <li className="nav-item">
+                        <Link className="nav-link" to="/permissionview">Rolių ir leidimų valdymas</Link>
+                    </li>
+                    <li className="nav-item">
+                        <Link className="nav-link" to="/writeofflog">Nurašymai</Link>
+                    </li>
                 </ul>
                 <ul className="navbar-nav">
                     {isAuthenticated() ? (
                         <li className="nav-item">
-                            <button className="btn btn-outline-danger" onClick={handleLogout}>Atsijungti</button>
+                        <button className="btn btn-outline-danger" onClick={handleLogout}>Atsijungti</button>
                         </li>
                     ) : (
                         <li className="nav-item">

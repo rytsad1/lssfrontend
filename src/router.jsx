@@ -8,6 +8,8 @@ import UserManagmentView from './views/UserManagmentView';
 import OrderView from './views/OrderView';
 import OrderHistoryView from './views/OrderHistoryView';
 import OrderManagementView from './views/OrderManagementView';
+import PermissionView from './views/PermissionView';
+import WriteOffLogView from "./views/WriteOffLogView.jsx";
 import { isAuthenticated } from './auth';
 
 const PrivateRoute = ({ children }) => {
@@ -22,6 +24,8 @@ const AppRouter = () => (
          <Route path="/orders" element={<OrderView />} />
         <Route path="/orderhistory" element={<OrderHistoryView />} />
         <Route path="/ordermanagement" element={<OrderManagementView />} />
+        <Route path="permissionview" element={<PermissionView />} />
+        <Route path="/writeofflog" element={<WriteOffLogView />} />
         <Route path="/" element={
                 <PrivateRoute>
                     <HomeView />
