@@ -4,6 +4,8 @@ import ItemAddForm from '../components/ItemAddForm';
 import ItemImport from '../components/ItemImport';
 import ItemEditForm from '../components/ItemEditForm';
 import ItemWriteOffModal from '../components/ItemWriteOffModal';
+import BillOfLadingModal from '../components/BillOfLadingModal';
+import {toast} from "react-toastify";
 
 const InventoryView = () => {
     const [items, setItems] = useState([]);
@@ -13,6 +15,15 @@ const InventoryView = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedItems, setSelectedItems] = useState([]);
     const [showWriteOffModal, setShowWriteOffModal] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+
+    const handleTransferToDepartment = () => {
+        if (Object.keys(selectedItems).length === 0) {
+            toast.error('Pasirinkite bent vieną daiktą.');
+            return;
+        }
+        setShowModal(true);
+    };
 
     const handleSelect = (itemId) => {
         setSelectedItems(prev =>
@@ -69,6 +80,10 @@ const InventoryView = () => {
                     disabled={selectedItems.length === 0}
                 >
                     Nurašyti pasirinktus daiktus
+                </button>
+
+                <button className="btn btn-secondary" onClick={handleTransferToDepartment}>
+                    Perduoti rinktinei
                 </button>
             </div>
 
@@ -140,6 +155,15 @@ const InventoryView = () => {
                 selectedItemIds={selectedItems}
                 allItems={items}
                 onConfirm={handleWriteOffConfirmed}
+            />
+            <BillOfLadingModal
+                show={showModal}
+                onClose={() => setShowModal(false)}
+                selectedItems={items.filter(item => selectedItems.includes(item.id_Item))}
+                onConfirm={() => {
+                    toast.success('Važtaraštis sukurtas.');
+                    setShowModal(false);
+                }}
             />
         </div>
     );
