@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { toast } from 'react-toastify'; // BŪTINAS importas, jei naudoji toast
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from '../axios';
 
-// Inline stiliai modalui
 const modalBackdropStyle = {
     position: 'fixed',
     top: 0,
@@ -28,10 +28,32 @@ const modalContentStyle = {
 const BillOfLadingModal = ({ isOpen, onClose, items, onSubmit }) => {
     const [departmentId, setDepartmentId] = useState(null);
     const [editableItems, setEditableItems] = useState(items);
+    const [departments, setDepartments] = useState([]);
 
     useEffect(() => {
         setEditableItems(items);
     }, [items]);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchDepartments();
+        }
+    }, [isOpen]);
+
+    const fetchDepartments = async () => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axios.get('/department', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            setDepartments(response.data.data || []);
+        } catch (error) {
+            console.error('Nepavyko gauti rinktinių:', error);
+            toast.error('Nepavyko gauti rinktinių duomenų');
+        }
+    };
 
     const handleQuantityChange = (id, quantity) => {
         setEditableItems(prev =>
@@ -66,9 +88,11 @@ const BillOfLadingModal = ({ isOpen, onClose, items, onSubmit }) => {
                         value={departmentId || ''}
                     >
                         <option value="">-- Pasirinkite --</option>
-                        <option value="1">Vilniaus rinktinė</option>
-                        <option value="2">Kauno rinktinė</option>
-                        {/* Pridėkite daugiau rinktinių jei reikia */}
+                        {departments.map(dept => (
+                            <option key={dept.id_Department} value={dept.id_Department}>
+                                {dept.Name}
+                            </option>
+                        ))}
                     </select>
                 </div>
 
