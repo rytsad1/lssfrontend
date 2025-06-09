@@ -16,14 +16,26 @@ const InventoryView = () => {
     const [selectedItems, setSelectedItems] = useState([]);
     const [showWriteOffModal, setShowWriteOffModal] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showBillModal, setShowBillModal] = useState(false);
+    const [selectedItemsData, setSelectedItemsData] = useState([]);
 
     const handleTransferToDepartment = () => {
-        if (Object.keys(selectedItems).length === 0) {
+        if (selectedItems.length === 0) {
             toast.error('Pasirinkite bent vieną daiktą.');
             return;
         }
-        setShowModal(true);
+
+        const selected = items
+            .filter(item => selectedItems.includes(item.id_Item))
+            .map(item => ({
+                ...item,
+                quantity: 1 // numatytas kiekis, vėliau keičiamas
+            }));
+
+        setSelectedItemsData(selected);
+        setShowBillModal(true);
     };
+
 
     const handleSelect = (itemId) => {
         setSelectedItems(prev =>
@@ -60,6 +72,79 @@ const InventoryView = () => {
 
         fetchItems();
     }, []);
+    const handleBillSubmit = async (departmentId, items) => {
+        const token = localStorage.getItem('authToken');
+        try {
+            // 1. Sukuriamas susijęs užsakymas
+            const orderPayload = {
+                type: 'Issue',
+                comment: '',
+                items: items.map(item => ({
+                    item_id: item.id_Item,
+                    quantity: item.quantity
+                })),
+                target_user_id: null, // Kadangi perduodama rinktinei, nurodoma null
+            };
+
+            const orderRes = await axios.post('/orders/full', orderPayload, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const orderId = orderRes.data?.order_id;
+            if (!orderId) throw new Error('Užsakymo ID negautas');
+
+            // 2. Apskaičiuojama suma
+            const sum = items.reduce((total, item) =>
+                total + (item.Price || 0) * item.quantity, 0);
+
+            // 3. Sukuriamas važtaraštis
+            const billPayload = {
+                Date: new Date().toISOString().slice(0, 10),
+                Sum: sum,
+                Type: 1,
+                fkOrderid_Order: orderId,
+                department_id: departmentId,
+                items: items.map(item => ({
+                    item_id: item.id_Item,
+                    quantity: item.quantity
+                })),
+                comment: '',
+            };
+
+            const billRes = await axios.post('/billoflading/create', billPayload, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const billId = billRes.data?.bill_id;
+            if (!billId) throw new Error('Važtaraščio ID nerastas');
+
+            // 4. Parsisiunčiamas PDF failas naudojant `axios` (su token)
+            const pdfRes = await axios.get(`/billoflading/pdf/${billId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob',
+            });
+
+            // 5. Sukuriama atsisiunčiamo failo nuoroda
+            const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `vaztarastis_${billId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            toast.success('Važtaraštis sukurtas ir atsisiųstas.');
+            setShowBillModal(false);
+            setSelectedItems([]);
+        } catch (err) {
+            console.error(err);
+            toast.error('Klaida kuriant važtaraštį.');
+        }
+    };
+
+
 
     return (
         <div className="container mt-5">
@@ -157,13 +242,10 @@ const InventoryView = () => {
                 onConfirm={handleWriteOffConfirmed}
             />
             <BillOfLadingModal
-                show={showModal}
-                onClose={() => setShowModal(false)}
-                selectedItems={items.filter(item => selectedItems.includes(item.id_Item))}
-                onConfirm={() => {
-                    toast.success('Važtaraštis sukurtas.');
-                    setShowModal(false);
-                }}
+                isOpen={showBillModal}
+                onClose={() => setShowBillModal(false)}
+                items={selectedItemsData}
+                onSubmit={handleBillSubmit}
             />
         </div>
     );
