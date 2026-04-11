@@ -8,6 +8,8 @@ const UserManagementView = () => {
     const [permissions, setPermissions] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
 
     const token = localStorage.getItem('authToken');
     const headers = { Authorization: `Bearer ${token}` };
@@ -40,16 +42,47 @@ const UserManagementView = () => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Ar tikrai norite pašalinti naudotoją?')) {
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        if (!window.confirm('Ar tikrai norite pašalinti naudotoją?')) {
+            return;
+        }
+
+        try {
             await axios.delete(`/users/${id}`, { headers });
+            setSuccessMessage('Naudotojas sėkmingai pašalintas.');
             fetchUsers();
+        } catch (error) {
+            const message =
+                error.response?.data?.message || 'Įvyko klaida šalinant naudotoją.';
+            setErrorMessage(message);
         }
     };
 
     return (
         <div className="container mt-4">
             <h3>Naudotojų valdymas</h3>
-            <button className="btn btn-primary mb-3" onClick={() => { setSelectedUser(null); setShowModal(true); }}>
+
+            {errorMessage && (
+                <div className="alert alert-danger" role="alert">
+                    {errorMessage}
+                </div>
+            )}
+
+            {successMessage && (
+                <div className="alert alert-success" role="alert">
+                    {successMessage}
+                </div>
+            )}
+
+            <button
+                className="btn btn-primary mb-3"
+                onClick={() => {
+                    setSelectedUser(null);
+                    setShowModal(true);
+                }}
+            >
                 Pridėti naudotoją
             </button>
 
@@ -67,8 +100,18 @@ const UserManagementView = () => {
                         <td>{user.Name}</td>
                         <td>{user.Email}</td>
                         <td>
-                            <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(user)}>Redaguoti</button>
-                            <button className="btn btn-sm btn-danger" onClick={() => handleDelete(user.id_User)}>Šalinti</button>
+                            <button
+                                className="btn btn-sm btn-warning me-2"
+                                onClick={() => handleEdit(user)}
+                            >
+                                Redaguoti
+                            </button>
+                            <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleDelete(user.id_User)}
+                            >
+                                Šalinti
+                            </button>
                         </td>
                     </tr>
                 ))}
@@ -81,7 +124,12 @@ const UserManagementView = () => {
                 roles={roles}
                 permissions={permissions}
                 onClose={() => setShowModal(false)}
-                onSuccess={fetchUsers}
+                onSuccess={() => {
+                    fetchUsers();
+                    setShowModal(false);
+                    setErrorMessage('');
+                    setSuccessMessage('Naudotojas sėkmingai išsaugotas.');
+                }}
             />
         </div>
     );
