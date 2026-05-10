@@ -23,7 +23,7 @@ const PermissionEditForm = ({ role, permissions, onUpdated }) => {
     const handleSave = async () => {
         const token = localStorage.getItem('authToken');
         try {
-            await axios.put(`/roles/${role.id_Role}/permissions`, {
+            await axios.put(`/v1/roles/${role.id_Role}/permissions`, {
                 permissions: selectedIds
             }, {
                 headers: { Authorization: `Bearer ${token}` }

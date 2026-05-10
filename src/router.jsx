@@ -1,4 +1,3 @@
-// src/router.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './views/Login';
@@ -11,7 +10,13 @@ import OrderManagementView from './views/OrderManagementView';
 import PermissionView from './views/PermissionView';
 import WriteOffLogView from "./views/WriteOffLogView.jsx";
 import IssuedItemsView from './views/IssuedItemsView';
-//import BillOfLandingView from './views/BillOfLandingView';
+import InventoryItemsView from './views/v2/InventoryItemsView';
+import ItemVariantsView from './views/v2/ItemVariantsView';
+import StockBatchesView from './views/v2/StockBatchesView';
+
+// V2 views
+import StockView from './views/v2/StockView';
+
 import { isAuthenticated } from './auth';
 
 const PrivateRoute = ({ children }) => {
@@ -21,21 +26,24 @@ const PrivateRoute = ({ children }) => {
 const AppRouter = () => (
     <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/inventory" element={<InventoryView />} />
-        <Route path="/users" element={<UserManagmentView />} />
-         <Route path="/orders" element={<OrderView />} />
-        <Route path="/orderhistory" element={<OrderHistoryView />} />
-        <Route path="/ordermanagement" element={<OrderManagementView />} />
-        <Route path="permissionview" element={<PermissionView />} />
-        <Route path="/writeofflog" element={<WriteOffLogView />} />
-        <Route path="/issue" element={<IssuedItemsView />} />
-        {/*<Route path="/billoflading" element={<BillOfLandingView />} />*/}
-        <Route path="/" element={
-                <PrivateRoute>
-                    <HomeView />
-                </PrivateRoute>
-            }
-        />
+
+        {/* Sena sistema */}
+        <Route path="/inventory" element={<PrivateRoute><InventoryView /></PrivateRoute>} />
+        <Route path="/users" element={<PrivateRoute><UserManagmentView /></PrivateRoute>} />
+        <Route path="/orders" element={<PrivateRoute><OrderView /></PrivateRoute>} />
+        <Route path="/orderhistory" element={<PrivateRoute><OrderHistoryView /></PrivateRoute>} />
+        <Route path="/ordermanagement" element={<PrivateRoute><OrderManagementView /></PrivateRoute>} />
+        <Route path="/permissionview" element={<PrivateRoute><PermissionView /></PrivateRoute>} />
+        <Route path="/writeofflog" element={<PrivateRoute><WriteOffLogView /></PrivateRoute>} />
+        <Route path="/issue" element={<PrivateRoute><IssuedItemsView /></PrivateRoute>} />
+
+        {/* Nauja sistema (v2) */}
+        <Route path="/v2/stock" element={<PrivateRoute><StockView /></PrivateRoute>} />
+            <Route path="/v2/items/:itemId/variants" element={<PrivateRoute><ItemVariantsView /></PrivateRoute>} />
+
+        <Route path="/" element={<PrivateRoute><HomeView /></PrivateRoute>} />
+            <Route path="/v2/items" element={<PrivateRoute><InventoryItemsView /></PrivateRoute>} />
+            <Route path="/v2/batches" element={<PrivateRoute><StockBatchesView /></PrivateRoute>} />
     </Routes>
 );
 

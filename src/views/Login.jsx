@@ -14,7 +14,7 @@ const Login = () => {
         setError(null);
 
         try {
-            const response = await axios.post('/login', {
+            const response = await axios.post('/v1/login', {
                 Email: email,
                 Password: password,
             });

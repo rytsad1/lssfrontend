@@ -15,18 +15,18 @@ const UserManagementView = () => {
     const headers = { Authorization: `Bearer ${token}` };
 
     const fetchUsers = async () => {
-        const response = await axios.get('/users', { headers });
+        const response = await axios.get('/v1/users', { headers });
         console.log('users:', response.data);
         setUsers(response.data.data || []);
     };
 
     const fetchRoles = async () => {
-        const response = await axios.get('/roles', { headers });
+        const response = await axios.get('/v1/roles', { headers });
         setRoles(response.data);
     };
 
     const fetchPermissions = async () => {
-        const response = await axios.get('/permissions', { headers });
+        const response = await axios.get('/v1/permissions', { headers });
         setPermissions(response.data);
     };
 
@@ -50,7 +50,7 @@ const UserManagementView = () => {
         }
 
         try {
-            await axios.delete(`/users/${id}`, { headers });
+            await axios.delete(`/v1/users/${id}`, { headers });
             setSuccessMessage('Naudotojas sėkmingai pašalintas.');
             fetchUsers();
         } catch (error) {

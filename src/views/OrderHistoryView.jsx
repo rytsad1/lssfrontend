@@ -10,7 +10,7 @@ const OrderHistoryView = () => {
         const fetchHistory = async () => {
             try {
                 const token = localStorage.getItem('authToken');
-                const response = await axios.get('/orderhistory', {
+                const response = await axios.get('/v1/orderhistory', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setHistory(response.data.data);

@@ -10,7 +10,7 @@ const OrderManagementView = () => {
     const fetchOrders = async () => {
         try {
             const token = localStorage.getItem('authToken');
-            const res = await axios.get('/orders?status=waiting', {
+            const res = await axios.get('/v1/orders?status=waiting', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setOrders(res.data.data);
@@ -27,7 +27,7 @@ const OrderManagementView = () => {
     const handleAction = async (orderId, action) => {
         try {
             const token = localStorage.getItem('authToken');
-            await axios.post(`/orders/${orderId}/${action}`, {}, {
+            await axios.post(`/v1/orders/${orderId}/${action}`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             toast.success(`Užsakymas ${action === 'approve' ? 'patvirtintas' : 'atmestas'}.`);

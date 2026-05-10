@@ -75,11 +75,11 @@ const UserFormModal = ({ show, user, onClose, onSuccess }) => {
 
         try {
             if (user) {
-                await axios.put(`/users/${user.id_User}`, payload, {
+                await axios.put(`/v1/users/${user.id_User}`, payload, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             } else {
-                await axios.post('/users', payload, {
+                await axios.post('/v1/users', payload, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             }

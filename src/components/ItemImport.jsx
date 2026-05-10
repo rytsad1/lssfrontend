@@ -18,7 +18,7 @@ const ItemImport = ({ show, onClose, onImportSuccess }) => {
 
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.post('/items/import/preview', formData, {
+            const response = await axios.post('/v1/items/import/preview', formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data',

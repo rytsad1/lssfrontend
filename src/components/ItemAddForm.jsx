@@ -22,7 +22,7 @@ const ItemAddForm = ({ onItemAdded }) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.post('/items', form, {
+            const response = await axios.post('/v1/items', form, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

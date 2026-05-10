@@ -98,7 +98,7 @@ const OrderCreateComponent = ({ onSuccess }) => {
     }
 
     try {
-      await axios.post('/orders/full', payload, {
+      await axios.post('/v1/orders/full', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success('Užsakymas pateiktas sėkmingai!');

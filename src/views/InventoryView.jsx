@@ -61,7 +61,7 @@ const InventoryView = () => {
         const fetchItems = async () => {
             try {
                 const token = localStorage.getItem('authToken');
-                const response = await axios.get('/items', {
+                const response = await axios.get('/v1/items', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setItems(response.data);
@@ -86,7 +86,7 @@ const InventoryView = () => {
                 target_user_id: null, // Kadangi perduodama rinktinei, nurodoma null
             };
 
-            const orderRes = await axios.post('/orders/full', orderPayload, {
+            const orderRes = await axios.post('/v1/orders/full', orderPayload, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -111,7 +111,7 @@ const InventoryView = () => {
                 comment: '',
             };
 
-            const billRes = await axios.post('/billoflading/create', billPayload, {
+            const billRes = await axios.post('/v1/billoflading/create', billPayload, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -119,7 +119,7 @@ const InventoryView = () => {
             if (!billId) throw new Error('Važtaraščio ID nerastas');
 
             // 4. Parsisiunčiamas PDF failas naudojant `axios` (su token)
-            const pdfRes = await axios.get(`/billoflading/pdf/${billId}`, {
+            const pdfRes = await axios.get(`/v1/billoflading/pdf/${billId}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob',
             });

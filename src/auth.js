@@ -1,15 +1,15 @@
 export const login = (token) => {
-    localStorage.setItem('token', token);
+    localStorage.setItem('authToken', token);
 };
 
 export const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
 };
 
 export const getToken = () => {
-    return localStorage.getItem('token');
+    return localStorage.getItem('authToken');
 };
 
 export const isAuthenticated = () => {
-    return !!localStorage.getItem('token');
+    return !!localStorage.getItem('authToken');
 };

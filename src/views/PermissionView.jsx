@@ -31,7 +31,7 @@ const PermissionView = () => {
     const fetchPermissions = async () => {
         try {
             const token = localStorage.getItem('authToken');
-            const res = await axios.get('/permissions', {
+            const res = await axios.get('/v1/permissions', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setPermissions(res.data.data);
@@ -45,7 +45,7 @@ const PermissionView = () => {
         const token = localStorage.getItem('authToken');
 
         try {
-            const res = await axios.get(`/roles/${role.id_Role}`, {
+            const res = await axios.get(`/v1/roles/${role.id_Role}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSelectedRole(res.data); // grąžins role su role.permissions (ID masyvas)

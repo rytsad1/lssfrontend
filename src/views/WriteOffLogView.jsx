@@ -12,7 +12,7 @@ const WriteOffLogView = () => {
     const fetchLogs = async () => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.get('/writeoff-logs', {
+            const response = await axios.get('/v1/writeoff-logs', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setLogs(response.data);

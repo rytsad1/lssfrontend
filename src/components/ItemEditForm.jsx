@@ -35,7 +35,7 @@ const ItemEditForm = ({ show, item, onClose, onItemUpdated }) => {
         setError(null);
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.put(`/items/${item.id_Item}`, formData, {
+            const response = await axios.put(`/v1/items/${item.id_Item}`, formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },

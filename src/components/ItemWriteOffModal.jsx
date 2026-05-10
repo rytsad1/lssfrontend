@@ -39,7 +39,7 @@ const ItemWriteOffModal = ({ show, onClose, selectedItemIds, allItems, onConfirm
 
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.post('/items/writeoff/confirm', {
+            const response = await axios.post('/v1/items/writeoff/confirm', {
                 items: payload
             }, {
                 headers: { Authorization: `Bearer ${token}` }

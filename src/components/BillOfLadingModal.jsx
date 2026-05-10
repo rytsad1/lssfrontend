@@ -43,7 +43,7 @@ const BillOfLadingModal = ({ isOpen, onClose, items, onSubmit }) => {
     const fetchDepartments = async () => {
         try {
             const token = localStorage.getItem('authToken');
-            const response = await axios.get('/department', {
+            const response = await axios.get('/v1/department', {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

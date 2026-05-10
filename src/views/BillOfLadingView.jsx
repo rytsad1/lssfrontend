@@ -13,7 +13,7 @@ const BillOfLadingView = ({ billId, show, onClose }) => {
             try {
                 setLoading(true);
                 const token = localStorage.getItem('authToken');
-                const response = await axios.get(`/billoflading/${billId}/download`, {
+                const response = await axios.get(`/v1/billoflading/${billId}/download`, {
                     headers: { Authorization: `Bearer ${token}` },
                     responseType: 'blob'
                 });

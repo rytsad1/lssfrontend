@@ -9,7 +9,7 @@ const IssuedItemsView = () => {
         const fetchIssuedItems = async () => {
             try {
                 const token = localStorage.getItem('authToken');
-                const response = await axios.get('/temporary-issues', {
+                const response = await axios.get('/v1/temporary-issues', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setIssuedItems(response.data.data);
@@ -25,7 +25,7 @@ const IssuedItemsView = () => {
     const handleReturn = async (id) => {
         try {
             const token = localStorage.getItem('authToken');
-            await axios.post(`/temporary-issues/${id}/return`, {}, {
+            await axios.post(`/v1/temporary-issues/${id}/return`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             toast.success('Daiktas grąžintas.');
