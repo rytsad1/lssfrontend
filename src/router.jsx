@@ -20,6 +20,7 @@ import StockView from './views/v2/StockView';
 import InventoryImportView from './views/v2/InventoryImportView';
 import InventoryMovementsView from './views/v2/InventoryMovementsView';
 import IssueView from './views/v2/IssueView';
+import AnomalyListView from './views/v2/AnomalyListView';
 //import AssetUnitsView from './views/v2/AssetUnitsView'; // jei dar nėra
 
 import { isAuthenticated } from './auth';
@@ -52,6 +53,7 @@ const AppRouter = () => (
         <Route path="/v2/import" element={<PrivateRoute><InventoryImportView /></PrivateRoute>} />
         <Route path="/v2/movements" element={<PrivateRoute><InventoryMovementsView /></PrivateRoute>} />
         <Route path="/v2/issue" element={<PrivateRoute><IssueView /></PrivateRoute>} />
+        <Route path="/v2/anomalies" element={<PrivateRoute><AnomalyListView /></PrivateRoute>}/>
     </Routes>
 );
 

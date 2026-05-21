@@ -36,7 +36,8 @@ const NavBar = () => {
 
                     {/* Nauja sistema dropdown */}
                     <li className="nav-item dropdown">
-                        <a className="nav-link dropdown-toggle text-success" href="#" role="button" data-bs-toggle="dropdown">
+                        <a className="nav-link dropdown-toggle text-success" href="#" role="button"
+                           data-bs-toggle="dropdown">
                             Sandėlys (nauja)
                         </a>
                         <ul className="dropdown-menu">
@@ -45,18 +46,25 @@ const NavBar = () => {
                             <li><Link className="dropdown-item" to="/v2/variants">Variantai</Link></li>
                             <li><Link className="dropdown-item" to="/v2/batches">Partijos</Link></li>
                             <li><Link className="dropdown-item" to="/v2/asset-units">Vienetinis turtas</Link></li>
-                            <li><hr className="dropdown-divider" /></li>
+                            <li>
+                                <hr className="dropdown-divider"/>
+                            </li>
                             <li><Link className="dropdown-item" to="/v2/import">Excel importas</Link></li>
                             <li><Link className="dropdown-item" to="/v2/issue">Išdavimas</Link></li>
                             <li><Link className="dropdown-item" to="/v2/return">Grąžinimas</Link></li>
                             <li><Link className="dropdown-item" to="/v2/writeoff">Nurašymas</Link></li>
-                            <li><hr className="dropdown-divider" /></li>
+                            <li>
+                                <hr className="dropdown-divider"/>
+                            </li>
                             <li><Link className="dropdown-item" to="/v2/movements">Judėjimų istorija</Link></li>
                             <li><Link className="dropdown-item" to="/v2/kits">Komplektai</Link></li>
                             <li><Link className="dropdown-item" to="/v2/kit-assignment">Komplekto išdavimas</Link></li>
                         </ul>
-                    </li>
 
+                    </li>
+                    <li className="nav-item">
+                        <Link className="nav-link" to="/v2/anomalies">Anomalijos</Link>
+                    </li>
                     <li className="nav-item">
                         <Link className="nav-link" to="/permissionview">Rolių valdymas</Link>
                     </li>
@@ -64,7 +72,7 @@ const NavBar = () => {
                 <ul className="navbar-nav">
                     {isAuthenticated() ? (
                         <li className="nav-item">
-                            <button className="btn btn-outline-danger" onClick={handleLogout}>Atsijungti</button>
+                        <button className="btn btn-outline-danger" onClick={handleLogout}>Atsijungti</button>
                         </li>
                     ) : (
                         <li className="nav-item">
