@@ -66,8 +66,11 @@ const NavBar = () => {
                         <Link className="nav-link" to="/v2/anomalies">Anomalijos</Link>
                     </li>
                     <li className="nav-item">
-                        <Link className="nav-link" to="/permissionview">Rolių valdymas</Link>
+                        <li><Link className="nav-link" to="/v2/my-items">Mano daiktai</Link></li>
                     </li>
+                        <li className="nav-item">
+                            <Link className="nav-link" to="/permissionview">Rolių valdymas</Link>
+                        </li>
                 </ul>
                 <ul className="navbar-nav">
                     {isAuthenticated() ? (

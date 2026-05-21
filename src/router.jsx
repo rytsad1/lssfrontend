@@ -21,7 +21,10 @@ import InventoryImportView from './views/v2/InventoryImportView';
 import InventoryMovementsView from './views/v2/InventoryMovementsView';
 import IssueView from './views/v2/IssueView';
 import AnomalyListView from './views/v2/AnomalyListView';
+import StockBatchDetailView from './views/v2/StockBatchDetailView.jsx';
 //import AssetUnitsView from './views/v2/AssetUnitsView'; // jei dar nėra
+import UserIssuedItemsView from './views/v2/UserIssuedItemsView';
+import WriteOffView from './views/v2/WriteOffView';
 
 import { isAuthenticated } from './auth';
 
@@ -54,6 +57,9 @@ const AppRouter = () => (
         <Route path="/v2/movements" element={<PrivateRoute><InventoryMovementsView /></PrivateRoute>} />
         <Route path="/v2/issue" element={<PrivateRoute><IssueView /></PrivateRoute>} />
         <Route path="/v2/anomalies" element={<PrivateRoute><AnomalyListView /></PrivateRoute>}/>
+        <Route path="/v2/batches/:id" element={<PrivateRoute><StockBatchDetailView /></PrivateRoute>}/>
+        <Route path="/v2/my-items" element={<PrivateRoute><UserIssuedItemsView /></PrivateRoute>} />
+        <Route path="/v2/writeoff" element={<PrivateRoute><WriteOffView /></PrivateRoute>} />
     </Routes>
 );
 

@@ -1,368 +1,302 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../../axios';
 import { toast } from 'react-toastify';
+import { Link } from 'react-router-dom';
 
 const IssueView = () => {
-    // -----------------------
-    // STATE
-    // -----------------------
-    const [items, setItems] = useState([]);
-    const [variants, setVariants] = useState([]);
     const [users, setUsers] = useState([]);
-    const [departments, setDepartments] = useState([]);
-
-    const [selectedItem, setSelectedItem] = useState(null);
+    const [variants, setVariants] = useState([]);
+    const [search, setSearch] = useState('');
     const [selectedVariant, setSelectedVariant] = useState(null);
-    const [variantStock, setVariantStock] = useState(null);
+    const [stockInfo, setStockInfo] = useState(null);
 
     const [form, setForm] = useState({
         quantity: 1,
         legacy_user_id: '',
-        legacy_department_id: '',
         reason: '',
     });
 
     const [loading, setLoading] = useState(false);
-    const [loadingVariants, setLoadingVariants] = useState(false);
     const [result, setResult] = useState(null);
 
-    // -----------------------
-    // HELPERS
-    // -----------------------
-    const getList = (res) => res?.data?.data ?? res?.data ?? [];
-    const safeArray = (val) => Array.isArray(val) ? val : [];
-
-    // -----------------------
-    // LOAD INITIAL DATA
-    // -----------------------
     useEffect(() => {
-        loadAll();
+        axios.get('/v1/users')
+            .then(res => setUsers(res.data.data ?? res.data ?? []))
+            .catch(() => {});
     }, []);
 
-    const loadAll = async () => {
-        try {
-            const [itemsRes, usersRes, depRes] = await Promise.all([
-                axios.get('/v2/inventory/items', { params: { per_page: 1000 } }),
-                axios.get('/v1/users'),
-                axios.get('/v1/department'),
-            ]);
-
-            setItems(safeArray(getList(itemsRes)));
-            setUsers(safeArray(getList(usersRes)));
-            setDepartments(safeArray(getList(depRes)));
-        } catch (e) {
-            toast.error('Nepavyko įkelti duomenų');
-            console.error(e);
-        }
-    };
-
-    const loadVariants = async (itemId) => {
-        setLoadingVariants(true);
-        try {
-            const res = await axios.get('/v2/inventory/variants', {
-                params: { item_id: itemId, per_page: 1000 },
-            });
-            setVariants(safeArray(getList(res)));
-        } catch (e) {
-            toast.error('Nepavyko įkelti variantų');
+    // Paieška su debounce
+    useEffect(() => {
+        if (!search || search.length < 2) {
             setVariants([]);
-        } finally {
-            setLoadingVariants(false);
+            return;
         }
-    };
+        const t = setTimeout(async () => {
+            try {
+                const res = await axios.get('/v2/inventory/variants', {
+                    params: { search }
+                });
+                setVariants(res.data.data || []);
+            } catch {}
+        }, 300);
+        return () => clearTimeout(t);
+    }, [search]);
 
-    // -----------------------
-    // SELECT
-    // -----------------------
-    const handleSelectItem = (item) => {
-        setSelectedItem(item);
-        setSelectedVariant(null);
-        setVariantStock(null);
-        setResult(null);
-        loadVariants(item.id);
-    };
+    // Kai pasirenkamas variantas — rodome likutį
+    useEffect(() => {
+        if (!selectedVariant) { setStockInfo(null); return; }
+        axios.get(`/v2/inventory/stock/${selectedVariant.id}`)
+            .then(res => setStockInfo(res.data.data))
+            .catch(() => setStockInfo(null));
+    }, [selectedVariant]);
 
-    const handleSelectVariant = (v) => {
+    const handleVariantSelect = (v) => {
         setSelectedVariant(v);
+        setSearch(`${v.sku} — ${v.name}${v.size ? ` (${v.size})` : ''}`);
+        setVariants([]);
         setResult(null);
-        // pasirodo likutį iš variant'o duomenų
-        const available = parseFloat(v.available_batch_quantity || 0);
-        setVariantStock(available);
     };
 
-    // -----------------------
-    // SUBMIT
-    // -----------------------
+    const handleClearVariant = () => {
+        setSelectedVariant(null);
+        setSearch('');
+        setStockInfo(null);
+        setResult(null);
+    };
+
     const handleSubmit = async () => {
+        if (!selectedVariant) { toast.error('Pasirink daiktą'); return; }
+        if (!form.legacy_user_id) { toast.error('Pasirink gavėją'); return; }
+        if (!form.quantity || Number(form.quantity) <= 0) { toast.error('Įvesk kiekį'); return; }
+
         setLoading(true);
         setResult(null);
-
-        const payload = {
-            item_variant_id: selectedVariant?.id,
-            quantity: Number(form.quantity),
-            legacy_user_id: form.legacy_user_id ? Number(form.legacy_user_id) : null,
-            legacy_department_id: form.legacy_department_id ? Number(form.legacy_department_id) : null,
-            reason: form.reason || null,
-        };
-
         try {
-            const res = await axios.post('/v2/inventory/issue', payload);
-            setResult(res.data.data);
-            toast.success(`Išduota ${res.data.data.issued_quantity} vnt.`);
+            const res = await axios.post('/v2/inventory/issue', {
+                item_variant_id:      selectedVariant.id,
+                quantity:             Number(form.quantity),
+                legacy_user_id:       form.legacy_user_id || null,
+                reason:               form.reason || 'Išdavimas',
+            });
 
-            // sumažinam likutį UI'e
-            setVariantStock(prev => prev - Number(form.quantity));
+            const data = res.data.data ?? res.data;
+            setResult(data);
+            toast.success('Išdavimas atliktas.');
 
-            // reset form bet palieka pasirinktus item/variant
+            // Reset kiekio ir priežasties, bet palieka variantą ir naudotoją
             setForm(prev => ({ ...prev, quantity: 1, reason: '' }));
+            // Atnaujinam likutį
+            axios.get(`/v2/inventory/stock/${selectedVariant.id}`)
+                .then(r => setStockInfo(r.data.data))
+                .catch(() => {});
+
         } catch (e) {
-            const data = e.response?.data;
-            if (data?.errors) {
-                Object.values(data.errors).flat().forEach(msg => toast.error(msg));
-            } else {
-                toast.error(data?.error || data?.message || 'Klaida išduodant');
-            }
+            toast.error(
+                e.response?.data?.error ||
+                e.response?.data?.message ||
+                'Klaida išduodant'
+            );
         } finally {
             setLoading(false);
         }
     };
 
-    const handleStartOver = () => {
-        setSelectedItem(null);
-        setSelectedVariant(null);
-        setVariantStock(null);
-        setVariants([]);
-        setResult(null);
-        setForm({ quantity: 1, legacy_user_id: '', legacy_department_id: '', reason: '' });
-    };
+    const isExpirable    = selectedVariant?.item?.is_expirable;
+    const availableQty   = stockInfo?.totals?.available ?? null;
+    const expiredQty     = stockInfo?.totals?.expired   ?? 0;
 
-    // -----------------------
-    // VALIDATION
-    // -----------------------
-    const canSubmit =
-        selectedVariant &&
-        form.legacy_user_id &&
-        form.quantity > 0 &&
-        (variantStock === null || form.quantity <= variantStock) &&
-        !loading;
-
-    // -----------------------
-    // UI
-    // -----------------------
     return (
-        <div className="container mt-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <h3>Daiktų išdavimas</h3>
-                {(selectedItem || result) && (
-                    <button className="btn btn-outline-secondary" onClick={handleStartOver}>
-                        Pradėti iš naujo
-                    </button>
-                )}
+        <div className="container mt-5 pt-4">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2 className="mb-0">Išdavimas</h2>
+                <Link to="/v2/stock" className="btn btn-outline-secondary btn-sm">Likučiai</Link>
             </div>
 
-            {/* 1. ITEMS */}
-            <div className="card mb-3">
-                <div className="card-header">
-                    <strong>1. Pasirink daiktą</strong>
-                </div>
-                <div className="card-body">
-                    {items.length === 0 ? (
-                        <p className="text-muted mb-0">Nėra daiktų sandėlyje.</p>
-                    ) : (
-                        <div className="row g-2">
-                            {items.map(item => (
-                                <div className="col-md-3" key={item.id}>
-                                    <button
-                                        className={`btn w-100 ${
-                                            selectedItem?.id === item.id
-                                                ? 'btn-primary'
-                                                : 'btn-outline-primary'
-                                        }`}
-                                        onClick={() => handleSelectItem(item)}
-                                    >
-                                        <div className="small text-muted">{item.code}</div>
-                                        <div>{item.name}</div>
-                                    </button>
+            {/* 1. DAIKTO PAIEŠKA */}
+            <div className="card p-3 mb-3">
+                <h5>1. Daiktas</h5>
+
+                <div className="position-relative">
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Ieškoti pagal SKU, pavadinimą, kodą..."
+                        value={search}
+                        onChange={e => {
+                            setSearch(e.target.value);
+                            if (selectedVariant) handleClearVariant();
+                        }}
+                    />
+
+                    {/* Dropdown rezultatai */}
+                    {variants.length > 0 && (
+                        <div
+                            className="border rounded shadow-sm bg-white position-absolute w-100"
+                            style={{ top: '100%', zIndex: 1000, maxHeight: '260px', overflowY: 'auto' }}
+                        >
+                            {variants.map(v => (
+                                <div
+                                    key={v.id}
+                                    className="px-3 py-2 border-bottom"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => handleVariantSelect(v)}
+                                    onMouseEnter={e => e.currentTarget.classList.add('bg-light')}
+                                    onMouseLeave={e => e.currentTarget.classList.remove('bg-light')}
+                                >
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{v.sku}</strong>
+                                            {v.size && <span className="badge bg-secondary ms-1">{v.size}</span>}
+                                            {v.item?.is_expirable && (
+                                                <span className="badge bg-warning text-dark ms-1">Galiojantis</span>
+                                            )}
+                                            <div className="small text-muted">{v.item?.name} · {v.item?.code}</div>
+                                        </div>
+                                        <div className="text-end small">
+                                            <span className={`fw-bold ${v.available_batch_quantity > 0 ? 'text-success' : 'text-danger'}`}>
+                                                {v.available_batch_quantity ?? 0}
+                                            </span>
+                                            <div className="text-muted">{v.item?.unit_of_measure}</div>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
+
+                {/* Pasirinkto varianto info */}
+                {selectedVariant && stockInfo && (
+                    <div className={`alert mt-3 mb-0 py-2 ${isExpirable ? 'alert-warning' : 'alert-info'}`}>
+                        <div className="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{selectedVariant.item?.name}</strong>
+                                {selectedVariant.size && (
+                                    <span className="badge bg-secondary ms-2">{selectedVariant.size}</span>
+                                )}
+                                {isExpirable && (
+                                    <span className="badge bg-warning text-dark ms-2">
+                                        ⚠ Išdavus bus automatiškai nurašyta
+                                    </span>
+                                )}
+                                <div className="small text-muted mt-1">
+                                    SKU: {selectedVariant.sku}
+                                </div>
+                            </div>
+                            <div className="text-end">
+                                <div className={`fs-4 fw-bold ${availableQty > 0 ? 'text-success' : 'text-danger'}`}>
+                                    {availableQty ?? '—'}
+                                </div>
+                                <div className="small text-muted">vnt. liko</div>
+                            </div>
+                        </div>
+                        {expiredQty > 0 && (
+                            <div className="text-danger small mt-1">
+                                ⚠ Pasibaigusių: {expiredQty} vnt. (nebus išduoti)
+                            </div>
+                        )}
+                        <button
+                            className="btn btn-sm btn-outline-secondary mt-2"
+                            onClick={handleClearVariant}
+                        >
+                            ✕ Keisti daiktą
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* 2. VARIANTS */}
-            {selectedItem && (
-                <div className="card mb-3">
-                    <div className="card-header">
-                        <strong>2. Pasirink variantą</strong>
-                    </div>
-                    <div className="card-body">
-                        {loadingVariants ? (
-                            <div className="text-center">
-                                <div className="spinner-border spinner-border-sm"></div>
-                            </div>
-                        ) : variants.length === 0 ? (
-                            <p className="text-muted mb-0">Šis daiktas neturi variantų.</p>
-                        ) : (
-                            <div className="row g-2">
-                                {variants.map(v => {
-                                    const stock = parseFloat(v.available_batch_quantity || 0);
-                                    const isEmpty = stock === 0;
-                                    return (
-                                        <div className="col-md-3" key={v.id}>
-                                            <button
-                                                className={`btn w-100 ${
-                                                    selectedVariant?.id === v.id
-                                                        ? 'btn-success'
-                                                        : isEmpty
-                                                            ? 'btn-outline-secondary'
-                                                            : 'btn-outline-success'
-                                                }`}
-                                                onClick={() => handleSelectVariant(v)}
-                                                disabled={isEmpty}
-                                            >
-                                                <div className="small">{v.sku}</div>
-                                                <div>{v.name}</div>
-                                                <div className="small">
-                                                    Likutis: <strong>{stock}</strong>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    );
-                                })}
+            {/* 2. GAVĖJAS */}
+            <div className="card p-3 mb-3">
+                <h5>2. Gavėjas</h5>
+                <select
+                    className="form-select"
+                    value={form.legacy_user_id}
+                    onChange={e => setForm(prev => ({ ...prev, legacy_user_id: e.target.value }))}
+                >
+                    <option value="">— Pasirinkti naudotoją —</option>
+                    {users.map(u => (
+                        <option key={u.id_User} value={u.id_User}>
+                            {u.Name} {u.Surname}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* 3. KIEKIS IR PRIEŽASTIS */}
+            <div className="card p-3 mb-3">
+                <h5>3. Kiekis ir priežastis</h5>
+                <div className="row g-3">
+                    <div className="col-md-3">
+                        <label className="form-label">Kiekis *</label>
+                        <input
+                            type="number"
+                            step="0.001"
+                            min="0.001"
+                            className="form-control"
+                            value={form.quantity}
+                            onChange={e => setForm(prev => ({ ...prev, quantity: e.target.value }))}
+                        />
+                        {availableQty !== null && (
+                            <div className="form-text">
+                                Maks.: <strong>{availableQty}</strong> vnt.
                             </div>
                         )}
                     </div>
-                </div>
-            )}
-
-            {/* 3. RECIPIENT */}
-            {selectedVariant && (
-                <div className="card mb-3">
-                    <div className="card-header">
-                        <strong>3. Kam išduodama</strong>
-                    </div>
-                    <div className="card-body">
-                        <div className="row">
-                            <div className="col-md-6 mb-3">
-                                <label className="form-label">Naudotojas *</label>
-                                <select
-                                    className="form-select"
-                                    value={form.legacy_user_id}
-                                    onChange={(e) =>
-                                        setForm({ ...form, legacy_user_id: e.target.value })
-                                    }
-                                >
-                                    <option value="">— Pasirink —</option>
-                                    {users.map(u => (
-                                        <option key={u.id_User} value={u.id_User}>
-                                            {u.Name} {u.Surname} ({u.Email})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="col-md-6 mb-3">
-                                <label className="form-label">Skyrius (nebūtina)</label>
-                                <select
-                                    className="form-select"
-                                    value={form.legacy_department_id}
-                                    onChange={(e) =>
-                                        setForm({ ...form, legacy_department_id: e.target.value })
-                                    }
-                                >
-                                    <option value="">Be skyriaus</option>
-                                    {departments.map(d => (
-                                        <option key={d.id_Department} value={d.id_Department}>
-                                            {d.Name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
+                    <div className="col-md-9">
+                        <label className="form-label">Priežastis</label>
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Pratybos, projektas..."
+                            value={form.reason}
+                            onChange={e => setForm(prev => ({ ...prev, reason: e.target.value }))}
+                        />
                     </div>
                 </div>
-            )}
+            </div>
 
-            {/* 4. QUANTITY + REASON */}
-            {selectedVariant && (
-                <div className="card mb-3">
-                    <div className="card-header">
-                        <strong>4. Kiekis ir priežastis</strong>
-                    </div>
-                    <div className="card-body">
-                        <div className="row">
-                            <div className="col-md-4 mb-3">
-                                <label className="form-label">Kiekis *</label>
-                                <input
-                                    type="number"
-                                    step="0.001"
-                                    min="0.001"
-                                    max={variantStock || undefined}
-                                    className="form-control"
-                                    value={form.quantity}
-                                    onChange={(e) =>
-                                        setForm({ ...form, quantity: e.target.value })
-                                    }
-                                />
-                                {variantStock !== null && (
-                                    <div className="form-text">
-                                        Likutis: <strong>{variantStock}</strong>
-                                        {form.quantity > variantStock && (
-                                            <span className="text-danger ms-2">Per daug!</span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+            {/* SUBMIT */}
+            <button
+                className="btn btn-dark btn-lg w-100 mb-4"
+                disabled={!selectedVariant || !form.legacy_user_id || loading}
+                onClick={handleSubmit}
+            >
+                {loading ? (
+                    <><span className="spinner-border spinner-border-sm me-2" />Išduodama...</>
+                ) : (
+                    'Išduoti'
+                )}
+            </button>
 
-                            <div className="col-md-8 mb-3">
-                                <label className="form-label">Priežastis (nebūtina)</label>
-                                <input
-                                    className="form-control"
-                                    placeholder="Pvz. pratybų metu, kasdienis aprūpinimas..."
-                                    value={form.reason}
-                                    onChange={(e) =>
-                                        setForm({ ...form, reason: e.target.value })
-                                    }
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            className="btn btn-primary"
-                            disabled={!canSubmit}
-                            onClick={handleSubmit}
-                        >
-                            {loading ? 'Išduodama...' : `Išduoti ${form.quantity} vnt.`}
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* RESULT */}
+            {/* REZULTATAS */}
             {result && (
-                <div className="alert alert-success">
-                    <h5>✓ Išdavimas atliktas</h5>
-                    <div className="row">
-                        <div className="col-md-6">
-                            <strong>Prašyta:</strong> {result.requested_quantity}<br />
-                            <strong>Išduota:</strong> {result.issued_quantity}
-                        </div>
+                <div className="card border-success mb-4">
+                    <div className="card-header bg-success text-white d-flex justify-content-between">
+                        <span>✓ Išduota {result.issued_quantity} vnt.</span>
+                        {result.is_expirable && (
+                            <span className="badge bg-warning text-dark">+ automatiškai nurašyta</span>
+                        )}
                     </div>
-
-                    {result.issued_batches?.length > 0 && (
-                        <details className="mt-2">
-                            <summary>Iš kokių partijų paimta ({result.issued_batches.length})</summary>
-                            <ul className="mt-2 mb-0">
-                                {result.issued_batches.map((b, i) => (
-                                    <li key={i}>
-                                        {b.batch_number || `#${b.batch_id}`}: <strong>{b.issued_quantity}</strong>
-                                        {' '}(liko {b.remaining_after})
-                                    </li>
-                                ))}
-                            </ul>
-                        </details>
-                    )}
+                    <div className="card-body p-0">
+                        <table className="table table-sm mb-0">
+                            <thead className="table-light">
+                            <tr>
+                                <th>Partija</th>
+                                <th className="text-end">Išduota</th>
+                                <th className="text-end">Liko partijoje</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {(result.issued_batches || []).map((b, i) => (
+                                <tr key={i}>
+                                    <td><code>{b.batch_number || `#${b.batch_id}`}</code></td>
+                                    <td className="text-end">{b.issued_quantity}</td>
+                                    <td className="text-end">{b.remaining_after}</td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>
