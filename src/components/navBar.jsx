@@ -19,26 +19,26 @@ const NavBar = () => {
                         <Link className="nav-link" to="/users">Naudotojai</Link>
                     </li>
 
-                    {/* Sena sistema dropdown */}
-                    <li className="nav-item dropdown">
-                        <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            Sena sistema
-                        </a>
-                        <ul className="dropdown-menu">
-                            <li><Link className="dropdown-item" to="/inventory">Inventorius</Link></li>
-                            <li><Link className="dropdown-item" to="/orders">Užsakymas</Link></li>
-                            <li><Link className="dropdown-item" to="/orderhistory">Užsakymų istorija</Link></li>
-                            <li><Link className="dropdown-item" to="/ordermanagement">Užsakymų valdymas</Link></li>
-                            <li><Link className="dropdown-item" to="/writeofflog">Nurašymai</Link></li>
-                            <li><Link className="dropdown-item" to="/issue">Išdavimai</Link></li>
-                        </ul>
-                    </li>
+                    {/*/!* Sena sistema dropdown *!/*/}
+                    {/*<li className="nav-item dropdown">*/}
+                    {/*    <a className="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">*/}
+                    {/*        Sena sistema*/}
+                    {/*    </a>*/}
+                    {/*    <ul className="dropdown-menu">*/}
+                    {/*        <li><Link className="dropdown-item" to="/inventory">Inventorius</Link></li>*/}
+                    {/*        <li><Link className="dropdown-item" to="/orders">Užsakymas</Link></li>*/}
+                    {/*        <li><Link className="dropdown-item" to="/orderhistory">Užsakymų istorija</Link></li>*/}
+                    {/*        <li><Link className="dropdown-item" to="/ordermanagement">Užsakymų valdymas</Link></li>*/}
+                    {/*        <li><Link className="dropdown-item" to="/writeofflog">Nurašymai</Link></li>*/}
+                    {/*        <li><Link className="dropdown-item" to="/issue">Išdavimai</Link></li>*/}
+                    {/*    </ul>*/}
+                    {/*</li>*/}
 
                     {/* Nauja sistema dropdown */}
                     <li className="nav-item dropdown">
                         <a className="nav-link dropdown-toggle text-success" href="#" role="button"
                            data-bs-toggle="dropdown">
-                            Sandėlys (nauja)
+                            Sandėlys
                         </a>
                         <ul className="dropdown-menu">
                             <li><Link className="dropdown-item" to="/v2/stock">Likučiai</Link></li>
@@ -51,7 +51,6 @@ const NavBar = () => {
                             </li>
                             <li><Link className="dropdown-item" to="/v2/import">Excel importas</Link></li>
                             <li><Link className="dropdown-item" to="/v2/issue">Išdavimas</Link></li>
-                            <li><Link className="dropdown-item" to="/v2/return">Grąžinimas</Link></li>
                             <li><Link className="dropdown-item" to="/v2/writeoff">Nurašymas</Link></li>
                             <li>
                                 <hr className="dropdown-divider"/>
@@ -59,15 +58,18 @@ const NavBar = () => {
                             <li><Link className="dropdown-item" to="/v2/movements">Judėjimų istorija</Link></li>
                             <li><Link className="dropdown-item" to="/v2/kits">Komplektai</Link></li>
                             <li><Link className="dropdown-item" to="/v2/kit-assignment">Komplekto išdavimas</Link></li>
+                            <hr className="dropdown-divider"/>
+                            <li><Link className="dropdown-item" to="/v2/my-orders">Mano daiktai</Link></li>
+                            <li><Link className="dropdown-item" to="/v2/warehouse-orders">Sandėlio užklausos</Link></li>
                         </ul>
 
                     </li>
                     <li className="nav-item">
                         <Link className="nav-link" to="/v2/anomalies">Anomalijos</Link>
                     </li>
-                    <li className="nav-item">
-                        <li><Link className="nav-link" to="/v2/my-items">Mano daiktai</Link></li>
-                    </li>
+                    {/*<li className="nav-item">*/}
+                    {/*    <li><Link className="nav-link" to="/v2/my-items">Mano daiktai</Link></li>*/}
+                    {/*</li>*/}
                         <li className="nav-item">
                             <Link className="nav-link" to="/permissionview">Rolių valdymas</Link>
                         </li>

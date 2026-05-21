@@ -25,6 +25,8 @@ import StockBatchDetailView from './views/v2/StockBatchDetailView.jsx';
 //import AssetUnitsView from './views/v2/AssetUnitsView'; // jei dar nėra
 import UserIssuedItemsView from './views/v2/UserIssuedItemsView';
 import WriteOffView from './views/v2/WriteOffView';
+import MyOrdersView       from './views/v2/MyOrdersView';
+import WarehouseOrdersView from './views/v2/WarehouseOrdersView';
 
 import { isAuthenticated } from './auth';
 
@@ -60,6 +62,8 @@ const AppRouter = () => (
         <Route path="/v2/batches/:id" element={<PrivateRoute><StockBatchDetailView /></PrivateRoute>}/>
         <Route path="/v2/my-items" element={<PrivateRoute><UserIssuedItemsView /></PrivateRoute>} />
         <Route path="/v2/writeoff" element={<PrivateRoute><WriteOffView /></PrivateRoute>} />
+        <Route path="/v2/my-orders" element={<PrivateRoute><MyOrdersView /></PrivateRoute>} />
+        <Route path="/v2/warehouse-orders" element={<PrivateRoute><WarehouseOrdersView /></PrivateRoute>} />
     </Routes>
 );
 
