@@ -17,7 +17,7 @@ const PermissionView = () => {
     const fetchRoles = async () => {
         try {
             const token = localStorage.getItem('authToken');
-            const res = await axios.get('/roles', {
+            const res = await axios.get('/v1/roles', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setRoles(res.data.data);
