@@ -43,9 +43,9 @@ const NavBar = () => {
                         <ul className="dropdown-menu">
                             <li><Link className="dropdown-item" to="/v2/stock">Likučiai</Link></li>
                             <li><Link className="dropdown-item" to="/v2/items">Daiktai</Link></li>
-                            <li><Link className="dropdown-item" to="/v2/variants">Variantai</Link></li>
+                            {/*<li><Link className="dropdown-item" to="/v2/variants">Variantai</Link></li>*/}
                             <li><Link className="dropdown-item" to="/v2/batches">Partijos</Link></li>
-                            <li><Link className="dropdown-item" to="/v2/asset-units">Vienetinis turtas</Link></li>
+                            {/*<li><Link className="dropdown-item" to="/v2/asset-units">Vienetinis turtas</Link></li>*/}
                             <li>
                                 <hr className="dropdown-divider"/>
                             </li>

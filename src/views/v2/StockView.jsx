@@ -84,7 +84,7 @@ const StockView = () => {
                         <th className="text-end">Kiekis</th>
                         <th className="text-end">Pasibaigę</th>
                         <th className="text-end">Vienetai</th>
-                        <th>Veiksmai</th>
+                        {/*<th>Veiksmai</th>*/}
                     </tr>
                     </thead>
                     <tbody>
@@ -112,14 +112,14 @@ const StockView = () => {
                             <td className="text-end">
                                 {row.available_assets_count > 0 ? row.available_assets_count : '—'}
                             </td>
-                            <td>
-                                <Link
-                                    to={`/v2/stock/${row.variant_id}`}
-                                    className="btn btn-sm btn-outline-info"
-                                >
-                                    Detalės
-                                </Link>
-                            </td>
+                            {/*<td>*/}
+                            {/*    /!*<Link*!/*/}
+                            {/*    /!*    to={`/v2/stock/${row.variant_id}`}*!/*/}
+                            {/*    /!*    className="btn btn-sm btn-outline-info"*!/*/}
+                            {/*    /!*>*!/*/}
+                            {/*    /!*    Detalės*!/*/}
+                            {/*    /!*</Link>*!/*/}
+                            {/*</td>*/}
                         </tr>
                     ))}
                     </tbody>
