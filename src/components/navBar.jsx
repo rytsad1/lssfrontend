@@ -61,11 +61,13 @@ const NavBar = () => {
                             <hr className="dropdown-divider"/>
                             <li><Link className="dropdown-item" to="/v2/my-orders">Mano daiktai</Link></li>
                             <li><Link className="dropdown-item" to="/v2/warehouse-orders">Sandėlio užklausos</Link></li>
+                            <li>
+                                <hr className="dropdown-divider"/>
+                            </li>
+                            <li><Link className="dropdown-item" to="/v2/forecast">Paklausos prognozė</Link></li>
+                            <li><Link className="dropdown-item" to="/v2/anomalies">Anomalijos</Link></li>
                         </ul>
 
-                    </li>
-                    <li className="nav-item">
-                        <Link className="nav-link" to="/v2/anomalies">Anomalijos</Link>
                     </li>
                     {/*<li className="nav-item">*/}
                     {/*    <li><Link className="nav-link" to="/v2/my-items">Mano daiktai</Link></li>*/}
