@@ -14,8 +14,13 @@ import InventoryItemsView from './views/v2/InventoryItemsView';
 import ItemVariantsView from './views/v2/ItemVariantsView';
 import StockBatchesView from './views/v2/StockBatchesView';
 
+
 // V2 views
 import StockView from './views/v2/StockView';
+import InventoryImportView from './views/v2/InventoryImportView';
+import InventoryMovementsView from './views/v2/InventoryMovementsView';
+import IssueView from './views/v2/IssueView';
+//import AssetUnitsView from './views/v2/AssetUnitsView'; // jei dar nėra
 
 import { isAuthenticated } from './auth';
 
@@ -44,6 +49,9 @@ const AppRouter = () => (
         <Route path="/" element={<PrivateRoute><HomeView /></PrivateRoute>} />
             <Route path="/v2/items" element={<PrivateRoute><InventoryItemsView /></PrivateRoute>} />
             <Route path="/v2/batches" element={<PrivateRoute><StockBatchesView /></PrivateRoute>} />
+        <Route path="/v2/import" element={<PrivateRoute><InventoryImportView /></PrivateRoute>} />
+        <Route path="/v2/movements" element={<PrivateRoute><InventoryMovementsView /></PrivateRoute>} />
+        <Route path="/v2/issue" element={<PrivateRoute><IssueView /></PrivateRoute>} />
     </Routes>
 );
 

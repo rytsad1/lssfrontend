@@ -32,7 +32,7 @@ const StockView = () => {
     };
 
     return (
-        <div className="container mt-4">
+        <div className="container mt-4" style={{ paddingTop: '70px' }}>
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <h3>Sandėlio likučiai</h3>
                 <div>
