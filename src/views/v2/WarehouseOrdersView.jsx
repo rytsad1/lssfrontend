@@ -3,10 +3,10 @@ import axios from '../../axios';
 import { toast } from 'react-toastify';
 
 const STATUS_LABELS = {
-    waiting:   { label: 'Laukiama',    cls: 'warning'   },
-    completed: { label: 'Atlikta',     cls: 'success'   },
-    canceled:  { label: 'Atmesta',     cls: 'danger'    },
-    confirmed: { label: 'Vykdoma',     cls: 'info'      },
+    waiting:   { label: 'Laukiama',  cls: 'warning'  },
+    completed: { label: 'Atlikta',   cls: 'success'  },
+    canceled:  { label: 'Atmesta',   cls: 'danger'   },
+    confirmed: { label: 'Vykdoma',   cls: 'info'     },
 };
 
 const TYPE_LABELS = {
@@ -15,13 +15,35 @@ const TYPE_LABELS = {
     temporary_issue: 'Laikinas išdavimas',
 };
 
+const WRITEOFF_TYPES = [
+    { value: 'damage',  label: 'Sugadinta' },
+    { value: 'loss',    label: 'Pamesta'   },
+    { value: 'expired', label: 'Pasibaigė galiojimas' },
+    { value: 'other',   label: 'Kita'      },
+];
+
 const WarehouseOrdersView = () => {
-    const [orders, setOrders]       = useState([]);
-    const [loading, setLoading]     = useState(true);
-    const [filter, setFilter]       = useState('waiting');
-    const [selected, setSelected]   = useState(null);
-    const [adminNote, setAdminNote] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+    const [orders, setOrders]               = useState([]);
+    const [loading, setLoading]             = useState(true);
+    const [filter, setFilter]               = useState('waiting');
+    const [selected, setSelected]           = useState(null);
+    const [adminNote, setAdminNote]         = useState('');
+    const [submitting, setSubmitting]       = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
+
+    const [doWriteoff, setDoWriteoff]         = useState(false);
+    const [writeoffType, setWriteoffType]     = useState('damage');
+    const [writeoffReason, setWriteoffReason] = useState('');
+    const [currentUser, setCurrentUser] = useState(null);
+
+    useEffect(() => {
+        axios.get('/v1/me')
+            .then(res => {
+                setCurrentUserId(res.data.id_User);
+                setCurrentUser(res.data);
+            })
+            .catch(() => {});
+    }, []);
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -39,21 +61,71 @@ const WarehouseOrdersView = () => {
 
     useEffect(() => { fetchOrders(); }, [filter]);
 
-    const handleAction = async (order, action) => {
-        if (action === 'confirm' &&
-            !window.confirm(`Patvirtinti ${TYPE_LABELS[order.order_type]?.toLowerCase()} užklausą?`)) return;
-        if (action === 'cancel' &&
-            !window.confirm('Atmesti šią užklausą?')) return;
+    const closeModal = () => {
+        setSelected(null);
+        setAdminNote('');
+        setDoWriteoff(false);
+        setWriteoffType('damage');
+        setWriteoffReason('');
+    };
+
+    const handleCancel = async () => {
+        if (!window.confirm('Atmesti šią užklausą?')) return;
+        setSubmitting(true);
+        try {
+            await axios.post(`/v2/inventory/orders/${selected.id}/confirm`, {
+                action:     'cancel',
+                admin_note: adminNote || null,
+            });
+            toast.success('Užklausa atmesta.');
+            closeModal();
+            fetchOrders();
+        } catch (e) {
+            toast.error(e.response?.data?.error || e.response?.data?.message || 'Klaida');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleConfirm = async () => {
+        if (!window.confirm(
+            doWriteoff
+                ? 'Patvirtinti grąžinimą ir nurašyti daiktą?'
+                : `Patvirtinti ${TYPE_LABELS[selected.order_type]?.toLowerCase()} užklausą?`
+        )) return;
+
+        if (doWriteoff && !writeoffReason.trim()) {
+            toast.error('Įvesk nurašymo priežastį');
+            return;
+        }
 
         setSubmitting(true);
         try {
-            await axios.post(`/v2/inventory/orders/${order.id}/confirm`, {
-                action,
-                admin_note: adminNote || null,
+            // 1. Patvirtinti užklausą
+            await axios.post(`/v2/inventory/orders/${selected.id}/confirm`, {
+                action:     'confirm',
+                admin_note: adminNote || (doWriteoff ? 'Grąžinta ir nurašyta' : null),
             });
-            toast.success(action === 'confirm' ? 'Užklausa patvirtinta ir atlikta.' : 'Užklausa atmesta.');
-            setSelected(null);
-            setAdminNote('');
+
+            // 2. Jei nurašymas — atlikti iškart po grąžinimo
+            if (doWriteoff) {
+                const variantId = selected.source_movement?.item_variant_id
+                    || selected.item_variant_id;
+
+                await axios.post('/v2/inventory/writeoff', {
+                    item_variant_id: variantId,
+                    quantity:        parseFloat(selected.quantity),
+                    reason:          writeoffReason,
+                    writeoff_type:   writeoffType,
+                    legacy_user_id:  currentUserId ?? null,
+                });
+
+                toast.success('Grąžinta ir nurašyta.');
+            } else {
+                toast.success('Užklausa patvirtinta ir atlikta.');
+            }
+
+            closeModal();
             fetchOrders();
         } catch (e) {
             toast.error(e.response?.data?.error || e.response?.data?.message || 'Klaida');
@@ -72,19 +144,22 @@ const WarehouseOrdersView = () => {
 
     const getItemName = (o) =>
         o.item_variant?.item?.name ||
-        o.source_movement?.item_variant?.item?.name ||
-        '—';
+        o.source_movement?.item_variant?.item?.name || '—';
 
     const getVariantInfo = (o) =>
         o.item_variant || o.source_movement?.item_variant;
+
+    const waitingCount = orders.filter(o => o.status === 'waiting').length;
 
     return (
         <div className="container-fluid mt-4" style={{ paddingTop: '70px' }}>
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h3>Sandėlio užklausos</h3>
-                <div className="badge bg-warning text-dark fs-6">
-                    {orders.filter(o => o.status === 'waiting').length} laukia
-                </div>
+                {waitingCount > 0 && (
+                    <span className="badge bg-warning text-dark fs-6">
+                        {waitingCount} laukia
+                    </span>
+                )}
             </div>
 
             {/* Filtrai */}
@@ -122,7 +197,7 @@ const WarehouseOrdersView = () => {
                                 <th>Priežastis</th>
                                 <th>Pateikta</th>
                                 <th>Statusas</th>
-                                <th style={{ width: '180px' }}></th>
+                                <th style={{ width: '130px' }}></th>
                             </tr>
                             </thead>
                             <tbody>
@@ -158,7 +233,13 @@ const WarehouseOrdersView = () => {
                                             {o.status === 'waiting' && (
                                                 <button
                                                     className="btn btn-sm btn-primary"
-                                                    onClick={() => { setSelected(o); setAdminNote(''); }}
+                                                    onClick={() => {
+                                                        setSelected(o);
+                                                        setAdminNote('');
+                                                        setDoWriteoff(false);
+                                                        setWriteoffReason('');
+                                                        setWriteoffType('damage');
+                                                    }}
                                                 >
                                                     Peržiūrėti
                                                 </button>
@@ -176,17 +257,19 @@ const WarehouseOrdersView = () => {
                 </div>
             )}
 
-            {/* Patvirtinimo modal */}
+            {/* Modal */}
             {selected && (
                 <div className="modal d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.5)' }}>
                     <div className="modal-dialog modal-lg">
                         <div className="modal-content">
+
                             <div className="modal-header">
                                 <h5 className="modal-title">
                                     {TYPE_LABELS[selected.order_type]} užklausa
                                 </h5>
-                                <button className="btn-close" onClick={() => setSelected(null)} />
+                                <button className="btn-close" onClick={closeModal} />
                             </div>
+
                             <div className="modal-body">
                                 <div className="row mb-3">
                                     <div className="col-md-6">
@@ -209,7 +292,9 @@ const WarehouseOrdersView = () => {
                                                 <div className="small text-muted">Daiktas</div>
                                                 <div className="fw-bold">{getItemName(selected)}</div>
                                                 {getVariantInfo(selected)?.size && (
-                                                    <span className="badge bg-secondary">{getVariantInfo(selected).size}</span>
+                                                    <span className="badge bg-secondary">
+                                                        {getVariantInfo(selected).size}
+                                                    </span>
                                                 )}
                                                 <div className="small text-muted mt-1">
                                                     Kiekis: <strong>{selected.quantity}</strong>
@@ -221,7 +306,7 @@ const WarehouseOrdersView = () => {
 
                                 {selected.comment && (
                                     <div className="alert alert-light border mb-3">
-                                        <strong>Komentaras:</strong> {selected.comment}
+                                        <strong>Naudotojo komentaras:</strong> {selected.comment}
                                     </div>
                                 )}
 
@@ -237,7 +322,7 @@ const WarehouseOrdersView = () => {
                                 )}
 
                                 <div className="mb-3">
-                                    <label className="form-label">Sandėlininko pastaba (neprivaloma)</label>
+                                    <label className="form-label">Sandėlininko pastaba</label>
                                     <textarea
                                         className="form-control"
                                         rows="2"
@@ -246,23 +331,90 @@ const WarehouseOrdersView = () => {
                                         placeholder="Daiktas priimtas, kiekis patikrintas..."
                                     />
                                 </div>
+
+                                {/* Nurašymo sekcija — tik grąžinimui */}
+                                {selected.order_type === 'return' && (
+                                    <div className={`border rounded p-3 ${doWriteoff ? 'border-danger bg-danger bg-opacity-10' : 'border-secondary'}`}>
+                                        <div className="form-check mb-2">
+                                            <input
+                                                type="checkbox"
+                                                className="form-check-input"
+                                                id="doWriteoff"
+                                                checked={doWriteoff}
+                                                onChange={e => {
+                                                    setDoWriteoff(e.target.checked);
+                                                    if (!e.target.checked) setWriteoffReason('');
+                                                }}
+                                            />
+                                            <label htmlFor="doWriteoff" className="form-check-label fw-bold">
+                                                ⚠ Grąžinti ir iškart nurašyti
+                                                <span className="text-muted fw-normal ms-2 small">
+                                                    (daiktas netinkamas naudoti)
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        {doWriteoff && (
+                                            <>
+                                                <div className="row g-2 mt-1">
+                                                    <div className="col-md-5">
+                                                        <label className="form-label form-label-sm">Nurašymo tipas *</label>
+                                                        <select
+                                                            className="form-select form-select-sm"
+                                                            value={writeoffType}
+                                                            onChange={e => setWriteoffType(e.target.value)}
+                                                        >
+                                                            {WRITEOFF_TYPES.map(t => (
+                                                                <option key={t.value} value={t.value}>{t.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="col-md-7">
+                                                        <label className="form-label form-label-sm">Nurašymo priežastis *</label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-control form-control-sm"
+                                                            placeholder="Kelnės suplysusios, nebepataisomos..."
+                                                            value={writeoffReason}
+                                                            onChange={e => setWriteoffReason(e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="mt-2 small text-muted">
+                                                    Atsakingas: <strong>
+
+                                                    {currentUser?.name || (currentUserId ? `#${currentUserId}` : '—')}
+                                                </strong>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
+
                             <div className="modal-footer">
                                 <button
                                     className="btn btn-outline-danger"
-                                    onClick={() => handleAction(selected, 'cancel')}
+                                    onClick={handleCancel}
                                     disabled={submitting}
                                 >
                                     ✕ Atmesti
                                 </button>
                                 <button
-                                    className="btn btn-success"
-                                    onClick={() => handleAction(selected, 'confirm')}
-                                    disabled={submitting}
+                                    className={`btn ${doWriteoff ? 'btn-danger' : 'btn-success'}`}
+                                    onClick={handleConfirm}
+                                    disabled={submitting || (doWriteoff && !writeoffReason.trim())}
                                 >
-                                    {submitting ? 'Vykdoma...' : '✓ Patvirtinti ir atlikti'}
+                                    {submitting ? (
+                                        <><span className="spinner-border spinner-border-sm me-1" />Vykdoma...</>
+                                    ) : doWriteoff ? (
+                                        '⚠ Patvirtinti ir nurašyti'
+                                    ) : (
+                                        '✓ Patvirtinti'
+                                    )}
                                 </button>
                             </div>
+
                         </div>
                     </div>
                 </div>

@@ -30,6 +30,7 @@ import WarehouseOrdersView from './views/v2/WarehouseOrdersView';
 import KitTemplatesView   from './views/v2/KitTemplatesView';
 import KitAssignmentView  from './views/v2/KitAssignmentView';
 import ForecastView from './views/v2/ForecastView';
+import InventoryOverviewView from './views/v2/InventoryOverviewView';
 
 
 import { isAuthenticated } from './auth';
@@ -71,6 +72,8 @@ const AppRouter = () => (
         <Route path="/v2/kits" element={<PrivateRoute><KitTemplatesView /></PrivateRoute>} />
         <Route path="/v2/kit-assignment" element={<PrivateRoute><KitAssignmentView /></PrivateRoute>} />
         <Route path="/v2/forecast" element={<PrivateRoute><ForecastView /></PrivateRoute>} />
+            <Route path="/v2/overview" element={<PrivateRoute><InventoryOverviewView /></PrivateRoute>} />
+
     </Routes>
 );
 

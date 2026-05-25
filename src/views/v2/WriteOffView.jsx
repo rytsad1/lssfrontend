@@ -11,26 +11,39 @@ const WRITEOFF_TYPES = [
 ];
 
 const WriteOffView = () => {
-    const [variants, setVariants]   = useState([]);
-    const [loading, setLoading]     = useState(false);
-    const [result, setResult]       = useState(null);
-    const [stockInfo, setStockInfo] = useState(null);
-    const [search, setSearch]       = useState('');
+    const [variants, setVariants]     = useState([]);
+    const [loading, setLoading]       = useState(false);
+    const [result, setResult]         = useState(null);
+    const [stockInfo, setStockInfo]   = useState(null);
+    const [search, setSearch]         = useState('');
+    const [users, setUsers]           = useState([]);
+    const [currentUserId, setCurrentUserId] = useState(null);
+
 
     const [form, setForm] = useState({
         item_variant_id: '',
-        quantity: '',
-        reason: '',
-        writeoff_type: 'damage',
-        allow_expired: false,
-        legacy_user_id: '',
+        quantity:        '',
+        reason:          '',
+        writeoff_type:   'damage',
+        allow_expired:   false,
+        legacy_user_id:  '',
     });
 
-    const [users, setUsers] = useState([]);
-
     useEffect(() => {
-        axios.get('/v1/users').then(res => setUsers(res.data.data || [])).catch(() => {});
+        axios.get('/v1/me')
+            .then(res => setCurrentUserId(res.data.id_User))
+            .catch(() => {});
+        axios.get('/v1/users')
+            .then(res => setUsers(res.data.data || []))
+            .catch(() => {});
     }, []);
+
+    // Auto-parinkti prisijungusį naudotoją
+    useEffect(() => {
+        if (currentUserId) {
+            setForm(prev => ({ ...prev, legacy_user_id: currentUserId }));
+        }
+    }, [currentUserId]);
 
     const searchVariants = async (term) => {
         if (!term || term.length < 2) { setVariants([]); return; }
@@ -75,16 +88,22 @@ const WriteOffView = () => {
         setResult(null);
         try {
             const res = await axios.post('/v2/inventory/writeoff', {
-                item_variant_id:      parseInt(form.item_variant_id),
-                quantity:             parseFloat(form.quantity),
-                reason:               form.reason,
-                writeoff_type:        form.writeoff_type,
-                allow_expired:        form.allow_expired,
-                legacy_user_id:       form.legacy_user_id ? parseInt(form.legacy_user_id) : null,
+                item_variant_id: parseInt(form.item_variant_id),
+                quantity:        parseFloat(form.quantity),
+                reason:          form.reason,
+                writeoff_type:   form.writeoff_type,
+                allow_expired:   form.allow_expired,
+                legacy_user_id:  form.legacy_user_id ? parseInt(form.legacy_user_id) : null,
             });
             setResult(res.data.data);
             toast.success('Nurašymas atliktas.');
-            setForm(prev => ({ ...prev, quantity: '', reason: '', item_variant_id: '' }));
+            setForm(prev => ({
+                ...prev,
+                quantity:        '',
+                reason:          '',
+                item_variant_id: '',
+                legacy_user_id:  currentUserId || '',
+            }));
             setSearch('');
             setStockInfo(null);
         } catch (e) {
@@ -125,16 +144,21 @@ const WriteOffView = () => {
                                         }}
                                     />
                                     {variants.length > 0 && (
-                                        <div className="border rounded shadow-sm bg-white position-absolute w-100"
-                                             style={{ top: '100%', zIndex: 1000 }}>
+                                        <div
+                                            className="border rounded shadow-sm bg-white position-absolute w-100"
+                                            style={{ top: '100%', zIndex: 1000 }}
+                                        >
                                             {variants.map(v => (
                                                 <div
                                                     key={v.id}
                                                     className="px-3 py-2 border-bottom"
                                                     style={{ cursor: 'pointer' }}
                                                     onClick={() => handleVariantSelect(v)}
+                                                    onMouseEnter={e => e.currentTarget.classList.add('bg-light')}
+                                                    onMouseLeave={e => e.currentTarget.classList.remove('bg-light')}
                                                 >
-                                                    <div><strong>{v.sku}</strong> — {v.name}
+                                                    <div>
+                                                        <strong>{v.sku}</strong> — {v.name}
                                                         {v.size && <span className="badge bg-secondary ms-1">{v.size}</span>}
                                                     </div>
                                                     <small className="text-muted">{v.item?.name}</small>
@@ -162,7 +186,12 @@ const WriteOffView = () => {
                                 <div className="row">
                                     <div className="col-md-6 mb-3">
                                         <label className="form-label">Nurašymo tipas *</label>
-                                        <select name="writeoff_type" className="form-select" value={form.writeoff_type} onChange={handleChange}>
+                                        <select
+                                            name="writeoff_type"
+                                            className="form-select"
+                                            value={form.writeoff_type}
+                                            onChange={handleChange}
+                                        >
                                             {WRITEOFF_TYPES.map(t => (
                                                 <option key={t.value} value={t.value}>{t.label}</option>
                                             ))}
@@ -192,18 +221,6 @@ const WriteOffView = () => {
                                         onChange={handleChange}
                                         placeholder="Sugadinta pratybų metu..."
                                     />
-                                </div>
-
-                                <div className="mb-3">
-                                    <label className="form-label">Naudotojas (atsakingas)</label>
-                                    <select name="legacy_user_id" className="form-select" value={form.legacy_user_id} onChange={handleChange}>
-                                        <option value="">— Nepriskirta —</option>
-                                        {users.map(u => (
-                                            <option key={u.id_User} value={u.id_User}>
-                                                {u.Name} {u.Surname}
-                                            </option>
-                                        ))}
-                                    </select>
                                 </div>
 
                                 {expired > 0 && (

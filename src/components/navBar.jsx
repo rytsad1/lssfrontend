@@ -66,6 +66,8 @@ const NavBar = () => {
                             </li>
                             <li><Link className="dropdown-item" to="/v2/forecast">Paklausos prognozė</Link></li>
                             <li><Link className="dropdown-item" to="/v2/anomalies">Anomalijos</Link></li>
+                            <li><Link className="dropdown-item" to="/v2/overview">📦 Inventorius (likučiai, daiktai,
+                                variantai, partijos)</Link></li>
                         </ul>
 
                     </li>
