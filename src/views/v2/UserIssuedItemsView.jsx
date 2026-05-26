@@ -30,7 +30,9 @@ const UserIssuedItemsView = () => {
             // Filtruojam — tik tie, kur dar yra ką grąžinti
             setMovements(res.data.data || []);
         } catch (e) {
-            toast.error('Klaida kraunant išduotus daiktus');
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant duomenis');
+            }
         } finally {
             setLoading(false);
         }

@@ -27,8 +27,10 @@ const KitTemplatesView = () => {
         try {
             const res = await axios.get('/v2/inventory/kits');
             setTemplates(res.data.data || []);
-        } catch {
-            toast.error('Klaida kraunant komplektus');
+        } catch (e) {
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant komplektus');
+            }
         } finally {
             setLoading(false);
         }
@@ -38,8 +40,10 @@ const KitTemplatesView = () => {
         try {
             const res = await axios.get(`/v2/inventory/kits/${id}`);
             setSelected(res.data.data);
-        } catch {
-            toast.error('Klaida kraunant komplektą');
+        } catch (e) {
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant komplektą');
+            }
         }
     };
 

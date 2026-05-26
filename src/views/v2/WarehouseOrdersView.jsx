@@ -52,8 +52,10 @@ const WarehouseOrdersView = () => {
             if (filter) params.status = filter;
             const res = await axios.get('/v2/inventory/orders', { params });
             setOrders(res.data.data || res.data || []);
-        } catch {
-            toast.error('Klaida kraunant užklausas');
+        } catch (e) {
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant užklausas');
+            }
         } finally {
             setLoading(false);
         }

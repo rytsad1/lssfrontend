@@ -95,8 +95,10 @@ const MyOrdersView = () => {
         try {
             const res = await axios.get('/v2/inventory/orders');
             setOrders(res.data.data || res.data || []);
-        } catch {
-            toast.error('Klaida kraunant užklausas');
+        } catch (e) {
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant užklausas');
+            }
         } finally {
             setLoading(false);
         }

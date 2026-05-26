@@ -14,37 +14,37 @@ const initialState = {
 };
 
 const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess }) => {
-    const [form, setForm] = useState(initialState);
+    const [form, setForm]         = useState(initialState);
     const [variants, setVariants] = useState([]);
-    const [errors, setErrors] = useState({});
+    const [errors, setErrors]     = useState({});
     const [submitting, setSubmitting] = useState(false);
 
-    // įkrauk variantus dropdownui
     useEffect(() => {
         if (show) {
             axios.get('/v2/inventory/variants', { params: { per_page: 1000 } })
                 .then(res => setVariants(res.data.data || []))
-                .catch(() => toast.error('Nepavyko įkrauti variantų sąrašo'));
+                .catch(e => { if (e.response?.status !== 403) toast.error('Nepavyko įkrauti variantų sąrašo'); });
         }
     }, [show]);
 
     useEffect(() => {
         if (batch) {
             setForm({
-                item_variant_id: batch.item_variant_id || '',
-                batch_number: batch.batch_number || '',
-                received_date: batch.received_date ? batch.received_date.substring(0, 10) : '',
-                quantity_initial: batch.quantity_initial || '',
+                // item_variant_id imamas iš batch arba iš presetVariantId (kai atidaroma iš overview)
+                item_variant_id:    batch.item_variant_id || presetVariantId || '',
+                batch_number:       batch.batch_number || '',
+                received_date:      batch.received_date ? batch.received_date.substring(0, 10) : '',
+                quantity_initial:   batch.quantity_initial || '',
                 quantity_remaining: batch.quantity_remaining || '',
-                expiration_date: batch.expiration_date ? batch.expiration_date.substring(0, 10) : '',
-                source_reference: batch.source_reference || '',
-                notes: batch.notes || '',
+                expiration_date:    batch.expiration_date ? batch.expiration_date.substring(0, 10) : '',
+                source_reference:   batch.source_reference || '',
+                notes:              batch.notes || '',
             });
         } else {
             setForm({
                 ...initialState,
                 item_variant_id: presetVariantId || '',
-                received_date: new Date().toISOString().substring(0, 10),
+                received_date:   new Date().toISOString().substring(0, 10),
             });
         }
         setErrors({});
@@ -54,7 +54,6 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
         const { name, value } = e.target;
         setForm(prev => {
             const next = { ...prev, [name]: value };
-            // jei pildomas quantity_initial ir kuriama nauja partija — auto kopijuojam į remaining
             if (!batch && name === 'quantity_initial') {
                 next.quantity_remaining = value;
             }
@@ -69,14 +68,14 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
 
         const payload = {
             ...form,
-            item_variant_id: parseInt(form.item_variant_id, 10),
-            quantity_initial: parseFloat(form.quantity_initial),
+            item_variant_id:    parseInt(form.item_variant_id, 10),
+            quantity_initial:   parseFloat(form.quantity_initial),
             quantity_remaining: parseFloat(form.quantity_remaining),
-            received_date: form.received_date || null,
-            expiration_date: form.expiration_date || null,
-            batch_number: form.batch_number || null,
-            source_reference: form.source_reference || null,
-            notes: form.notes || null,
+            received_date:      form.received_date    || null,
+            expiration_date:    form.expiration_date  || null,
+            batch_number:       form.batch_number     || null,
+            source_reference:   form.source_reference || null,
+            notes:              form.notes            || null,
         };
 
         try {
@@ -111,10 +110,11 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
                         <h5 className="modal-title">
                             {batch ? 'Redaguoti partiją' : 'Nauja partija'}
                         </h5>
-                        <button type="button" className="btn-close" onClick={onClose}></button>
+                        <button type="button" className="btn-close" onClick={onClose} />
                     </div>
 
                     <div className="modal-body">
+
                         <div className="mb-3">
                             <label className="form-label">Variantas *</label>
                             <select
@@ -133,7 +133,9 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
                                     </option>
                                 ))}
                             </select>
-                            {errors.item_variant_id && <div className="invalid-feedback">{errors.item_variant_id[0]}</div>}
+                            {errors.item_variant_id && (
+                                <div className="invalid-feedback">{errors.item_variant_id[0]}</div>
+                            )}
                         </div>
 
                         <div className="row">
@@ -147,7 +149,9 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
                                     onChange={handleChange}
                                     placeholder="BATCH-001"
                                 />
-                                {errors.batch_number && <div className="invalid-feedback">{errors.batch_number[0]}</div>}
+                                {errors.batch_number && (
+                                    <div className="invalid-feedback">{errors.batch_number[0]}</div>
+                                )}
                             </div>
                             <div className="col-md-6 mb-3">
                                 <label className="form-label">Gavimo data</label>
@@ -158,7 +162,9 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
                                     value={form.received_date}
                                     onChange={handleChange}
                                 />
-                                {errors.received_date && <div className="invalid-feedback">{errors.received_date[0]}</div>}
+                                {errors.received_date && (
+                                    <div className="invalid-feedback">{errors.received_date[0]}</div>
+                                )}
                             </div>
                         </div>
 
@@ -174,7 +180,9 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
                                     onChange={handleChange}
                                     required
                                 />
-                                {errors.quantity_initial && <div className="invalid-feedback">{errors.quantity_initial[0]}</div>}
+                                {errors.quantity_initial && (
+                                    <div className="invalid-feedback">{errors.quantity_initial[0]}</div>
+                                )}
                             </div>
                             <div className="col-md-4 mb-3">
                                 <label className="form-label">Likęs kiekis *</label>
@@ -187,7 +195,9 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
                                     onChange={handleChange}
                                     required
                                 />
-                                {errors.quantity_remaining && <div className="invalid-feedback">{errors.quantity_remaining[0]}</div>}
+                                {errors.quantity_remaining && (
+                                    <div className="invalid-feedback">{errors.quantity_remaining[0]}</div>
+                                )}
                                 {!batch && (
                                     <div className="form-text">Naujai partijai paprastai sutampa su pradiniu</div>
                                 )}
@@ -201,7 +211,9 @@ const StockBatchFormModal = ({ show, batch, presetVariantId, onClose, onSuccess 
                                     value={form.expiration_date}
                                     onChange={handleChange}
                                 />
-                                {errors.expiration_date && <div className="invalid-feedback">{errors.expiration_date[0]}</div>}
+                                {errors.expiration_date && (
+                                    <div className="invalid-feedback">{errors.expiration_date[0]}</div>
+                                )}
                             </div>
                         </div>
 

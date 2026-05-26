@@ -42,8 +42,10 @@ const InventoryOverviewView = () => {
             const res = await axios.get('/v2/inventory/overview', { params });
             setItems(res.data.data || []);
             setTotalCount(res.data.meta?.total ?? 0);
-        } catch {
-            toast.error('Klaida kraunant duomenis');
+        } catch (e) {
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant duomenis');
+            }
         } finally {
             setLoading(false);
         }
