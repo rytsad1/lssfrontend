@@ -21,8 +21,10 @@ const PermissionView = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setRoles(res.data.data);
-        } catch (error) {
-            toast.error('Nepavyko užkrauti rolių.');
+        } catch (e) {
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant roles');
+            }
         } finally {
             setLoading(false);
         }
@@ -35,8 +37,10 @@ const PermissionView = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setPermissions(res.data.data);
-        } catch (error) {
-            toast.error('Nepavyko užkrauti leidimų.');
+        } catch (e) {
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant leidimus');
+            }
         }
     };
 
@@ -49,8 +53,10 @@ const PermissionView = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSelectedRole(res.data); // grąžins role su role.permissions (ID masyvas)
-        } catch (err) {
-            toast.error('Nepavyko užkrauti rolės informacijos.');
+        } catch (e) {
+            if (e.response?.status !== 403) {
+                toast.error('Klaida kraunant rolės informaciją');
+            }
         }
     };
 
