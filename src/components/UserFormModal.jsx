@@ -16,7 +16,7 @@ const UserFormModal = ({ show, user, onClose, onSuccess }) => {
         const token = localStorage.getItem('authToken');
         const fetchRoles = async () => {
             try {
-                const res = await axios.get('/roles', {
+                const res = await axios.get('/v1/roles', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setRoles(res.data.data || []);

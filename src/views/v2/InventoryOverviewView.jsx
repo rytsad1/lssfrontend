@@ -32,12 +32,13 @@ const InventoryOverviewView = () => {
     const [selectedBatch, setSelectedBatch]       = useState(null);
     const [batchVariantCtx, setBatchVariantCtx]   = useState(null);
 
-    const fetchItems = useCallback(async (p = page, s = search, a = activeFilter) => {
+    const fetchItems = async (p, s, a, sc, sd) => {
         setLoading(true);
         try {
             const params = { page: p, per_page: PAGE_SIZE };
             if (s) params.search = s;
             if (a !== 'all') params.is_active = a === 'active';
+            if (sc && sc !== 'stock') { params.sort = sc; params.dir = sd; }
             const res = await axios.get('/v2/inventory/overview', { params });
             setItems(res.data.data || []);
             setTotalCount(res.data.meta?.total ?? 0);
@@ -46,13 +47,24 @@ const InventoryOverviewView = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, search, activeFilter]);
+    };
 
     useEffect(() => {
-        fetchItems(page, search, activeFilter);
-    }, [page, activeFilter]);
+        fetchItems(page, search, activeFilter, sortCol, sortDir);
+    }, [page]);
 
-    const doSearch = () => { setPage(1); fetchItems(1, search, activeFilter); };
+// sort useEffect:
+    useEffect(() => {
+        if (sortCol !== 'stock') {
+            setPage(1);
+            fetchItems(1, search, activeFilter, sortCol, sortDir);
+        }
+    }, [sortCol, sortDir]);
+
+    const doSearch = () => {
+        setPage(1);
+        fetchItems(1, search, activeFilter, sortCol, sortDir);
+    };
 
     const toggleItem    = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }));
     const toggleVariant = (id) => setExpandedV(p => ({ ...p, [id]: !p[id] }));
@@ -97,7 +109,7 @@ const InventoryOverviewView = () => {
         try {
             await axios.delete(`/v2/inventory/items/${item.id}`);
             toast.success('Daiktas ištrintas.');
-            fetchItems(page, search, activeFilter);
+            fetchItems(page, search, activeFilter, sortCol, sortDir);
         } catch (e) { toast.error(e.response?.data?.message || 'Klaida'); }
     };
 
@@ -106,7 +118,7 @@ const InventoryOverviewView = () => {
         try {
             await axios.delete(`/v2/inventory/variants/${v.id}`);
             toast.success('Variantas ištrintas.');
-            fetchItems(page, search, activeFilter);
+            fetchItems(page, search, activeFilter, sortCol, sortDir);
         } catch (e) { toast.error(e.response?.data?.message || 'Klaida'); }
     };
 
@@ -115,7 +127,7 @@ const InventoryOverviewView = () => {
         try {
             await axios.delete(`/v2/inventory/batches/${b.id}`);
             toast.success('Partija ištrinta.');
-            fetchItems(page, search, activeFilter);
+            fetchItems(page, search, activeFilter, sortCol, sortDir);
         } catch (e) { toast.error(e.response?.data?.message || 'Klaida'); }
     };
 
@@ -435,14 +447,14 @@ const InventoryOverviewView = () => {
                 show={showItemModal}
                 item={selectedItem}
                 onClose={() => setShowItemModal(false)}
-                onSuccess={() => { setShowItemModal(false); fetchItems(page, search, activeFilter); }}
+                onSuccess={() => { setShowItemModal(false); fetchItems(page, search, activeFilter, sortCol, sortDir); }}
             />
             <StockBatchFormModal
                 show={showBatchModal}
                 batch={selectedBatch}
                 presetVariantId={batchVariantCtx?.id}
                 onClose={() => setShowBatchModal(false)}
-                onSuccess={() => { setShowBatchModal(false); fetchItems(page, search, activeFilter); }}
+                onSuccess={() => { setShowBatchModal(false); fetchItems(page, search, activeFilter, sortCol, sortDir); }}
             />
             <ItemVariantFormModal
                 show={showVariantModal}
@@ -451,7 +463,7 @@ const InventoryOverviewView = () => {
                 itemName={variantItemCtx?.name}
                 itemCode={variantItemCtx?.code}
                 onClose={() => setShowVariantModal(false)}
-                onSuccess={() => { setShowVariantModal(false); fetchItems(page, search, activeFilter); }}
+                onSuccess={() => { setShowVariantModal(false); fetchItems(page, search, activeFilter, sortCol, sortDir); }}
             />
         </div>
     );
