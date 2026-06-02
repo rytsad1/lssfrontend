@@ -18,8 +18,14 @@ const Login = () => {
                 Email: email,
                 Password: password,
             });
+
             login(response.data.access_token);
-            navigate('/');
+
+            if (response.data.must_change_password) {
+                navigate('/change-password');
+            } else {
+                navigate('/');
+            }
         } catch (err) {
             setError(err.response?.data?.message || 'Prisijungimo klaida');
         }

@@ -120,16 +120,10 @@ const UserFormModal = ({ show, user, onClose, onSuccess }) => {
                             <input type="email" className="form-control" value={email} onChange={e => setEmail(e.target.value)} />
                         </div>
                         {!user && (
-                            <>
-                                <div className="mb-3">
-                                    <label>Slaptažodis</label>
-                                    <input type="password" className="form-control" value={password} onChange={e => setPassword(e.target.value)} />
-                                </div>
-                                <div className="mb-3">
-                                    <label>Pakartoti slaptažodį</label>
-                                    <input type="password" className="form-control" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-                                </div>
-                            </>
+                            <div className="alert alert-info mb-3">
+                                <strong>ℹ Aktyvacijos pranešimas</strong>
+                                Naudotojas pirmojo prisijungimo metu privalės pakeisti slaptažodį.
+                            </div>
                         )}
                         <div className="mb-3">
                             <label>Rolės</label>

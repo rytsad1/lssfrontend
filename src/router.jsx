@@ -32,6 +32,7 @@ import KitAssignmentView  from './views/v2/KitAssignmentView';
 import ForecastView from './views/v2/ForecastView';
 import InventoryOverviewView from './views/v2/InventoryOverviewView';
 import IssueRequestView from './views/v2/IssueRequestView';
+import ChangePasswordView from './views/v2/ChangePasswordView';
 
 
 import { isAuthenticated } from './auth';
@@ -75,6 +76,7 @@ const AppRouter = () => (
         <Route path="/v2/forecast" element={<PrivateRoute><ForecastView /></PrivateRoute>} />
             <Route path="/v2/overview" element={<PrivateRoute><InventoryOverviewView /></PrivateRoute>} />
         <Route path="/v2/issue-request" element={<PrivateRoute><IssueRequestView /></PrivateRoute>} />
+        <Route path="/change-password" element={<ChangePasswordView />} />
 
     </Routes>
 );
