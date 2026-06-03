@@ -56,6 +56,7 @@ const Pagination = ({ page, total, pageSize, onPage }) => {
 const MyOrdersView = () => {
     const [orders, setOrders]               = useState([]);
     const [issuedItems, setIssuedItems]     = useState([]);
+    const [myAssets, setMyAssets]           = useState([]);
     const [loading, setLoading]             = useState(true);
     const [currentUserId, setCurrentUserId] = useState(null);
     const [showReturnModal, setShowReturnModal]   = useState(false);
@@ -74,6 +75,10 @@ const MyOrdersView = () => {
     const [consumPage, setConsumPage]     = useState(1);
     const [consumSearch, setConsumSearch] = useState('');
 
+    const [assetSearch, setAssetSearch]   = useState('');
+    const [assetPage, setAssetPage]       = useState(1);
+    const ASSET_PAGE_SIZE = 20;
+
     useEffect(() => {
         axios.get('/v1/me')
             .then(res => {
@@ -81,6 +86,7 @@ const MyOrdersView = () => {
                 setCurrentUserId(uid);
                 fetchOrders(uid);
                 fetchIssuedItems(uid);
+                fetchMyAssets(uid);
             })
             .catch(() => {
                 toast.error('Nepavyko nustatyti naudotojo');
@@ -96,9 +102,7 @@ const MyOrdersView = () => {
             const res = await axios.get('/v2/inventory/orders');
             setOrders(res.data.data || res.data || []);
         } catch (e) {
-            if (e.response?.status !== 403) {
-                toast.error('Klaida kraunant užklausas');
-            }
+            if (e.response?.status !== 403) toast.error('Klaida kraunant užklausas');
         } finally {
             setLoading(false);
         }
@@ -109,29 +113,39 @@ const MyOrdersView = () => {
         if (!userId) return;
         try {
             const [r1, r2, ordersRes] = await Promise.all([
-                axios.get('/v2/inventory/movements', {
-                    params: { legacy_user_id: userId, movement_type: 'issue' }
-                }),
-                axios.get('/v2/inventory/movements', {
-                    params: { legacy_user_id: userId, movement_type: 'temporary_issue' }
-                }),
+                axios.get('/v2/inventory/movements', { params: { legacy_user_id: userId, movement_type: 'issue' } }),
+                axios.get('/v2/inventory/movements', { params: { legacy_user_id: userId, movement_type: 'temporary_issue' } }),
                 axios.get('/v2/inventory/orders'),
             ]);
-            const all = [
-                ...(r1.data.data || []),
-                ...(r2.data.data || []),
-            ];
+            const all = [...(r1.data.data || []), ...(r2.data.data || [])];
             all.sort((a, b) => new Date(b.movement_date) - new Date(a.movement_date));
             const pendingIds = new Set(
                 (ordersRes.data.data || ordersRes.data || [])
-                    .filter(o =>
-                        o.order_type === 'return' &&
-                        ['waiting', 'confirmed', 'completed'].includes(o.status)
-                    )
+                    .filter(o => o.order_type === 'return' && ['waiting', 'confirmed', 'completed'].includes(o.status))
                     .map(o => o.source_movement_id)
                     .filter(Boolean)
             );
-            setIssuedItems(all.filter(m => !pendingIds.has(m.id)));
+            // Kiekiniams daiktams — ne asset
+            setIssuedItems(all.filter(m =>
+                !pendingIds.has(m.id) &&
+                !m.item_variant?.item?.is_asset &&
+                !m.item_variant?.item?.is_serialized
+            ));
+        } catch {}
+    };
+
+    const fetchMyAssets = async (uid) => {
+        const userId = uid ?? currentUserId;
+        if (!userId) return;
+        try {
+            const res = await axios.get('/v2/inventory/asset-units', {
+                params: {
+                    assigned_user_id: userId,
+                    status: 'issued,temporary_issued',
+                    per_page: 200,
+                }
+            });
+            setMyAssets(res.data.data || []);
         } catch {}
     };
 
@@ -154,7 +168,7 @@ const MyOrdersView = () => {
                 reason:             returnForm.reason || 'Grąžinimas',
                 comment:            returnForm.comment || null,
             });
-            toast.success('Grąžinimo užklausa pateikta. Laukiama sandėlininko patvirtinimo.');
+            toast.success('Grąžinimo užklausa pateikta.');
             setShowReturnModal(false);
             setIssuedItems(prev => prev.filter(m => m.id !== selectedMovement.id));
             fetchOrders(currentUserId);
@@ -173,7 +187,6 @@ const MyOrdersView = () => {
         });
     };
 
-    // Daiktų filtravimas
     const allReturnableItems  = issuedItems.filter(m => !m.item_variant?.item?.is_expirable);
     const allConsumableItems  = issuedItems.filter(m =>  m.item_variant?.item?.is_expirable);
 
@@ -193,10 +206,19 @@ const MyOrdersView = () => {
         return true;
     });
 
+    const filteredAssets = myAssets.filter(a => {
+        const name = a.item_variant?.item?.name?.toLowerCase() || '';
+        const inv  = a.inventory_number?.toLowerCase() || '';
+        const sn   = a.serial_number?.toLowerCase() || '';
+        if (!assetSearch) return true;
+        const s = assetSearch.toLowerCase();
+        return name.includes(s) || inv.includes(s) || sn.includes(s);
+    });
+
     const pagedItems  = filteredReturnableItems.slice((itemPage - 1) * ITEMS_PAGE_SIZE, itemPage * ITEMS_PAGE_SIZE);
     const pagedConsum = filteredConsumableItems.slice((consumPage - 1) * CONSUM_PAGE_SIZE, consumPage * CONSUM_PAGE_SIZE);
+    const pagedAssets = filteredAssets.slice((assetPage - 1) * ASSET_PAGE_SIZE, assetPage * ASSET_PAGE_SIZE);
 
-    // Užklausų filtravimas
     const filteredOrders = orders.filter(o => {
         const item = o.item_variant?.item || o.source_movement?.item_variant?.item;
         if (orderFilter.type   && o.order_type !== orderFilter.type)   return false;
@@ -224,56 +246,111 @@ const MyOrdersView = () => {
 
             <div className="row g-4 align-items-start">
 
-                {/* KAIRĖ — Grąžintini daiktai */}
+                {/* KAIRĖ */}
                 <div className="col-md-5">
+
+                    {/* Asset vienetai */}
+                    {myAssets.length > 0 && (
+                        <div className="card mb-4">
+                            <div className="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Mano vienetiniai daiktai</strong>
+                                    <div className="small text-muted fw-normal">Ginklai, telefonai, įranga ir kt.</div>
+                                </div>
+                                <span className="badge bg-info">{filteredAssets.length}</span>
+                            </div>
+                            <div className="border-bottom py-2 px-3">
+                                <input
+                                    type="text"
+                                    className="form-control form-control-sm"
+                                    placeholder="Paieška pagal pavadinimą, inv. nr., S/N..."
+                                    value={assetSearch}
+                                    onChange={e => { setAssetSearch(e.target.value); setAssetPage(1); }}
+                                />
+                            </div>
+                            <div className="card-body p-0">
+                                {filteredAssets.length === 0 ? (
+                                    <div className="p-3 text-muted small">Nėra rezultatų.</div>
+                                ) : (
+                                    <>
+                                        <div className="table-responsive">
+                                            <table className="table table-sm table-hover mb-0">
+                                                <thead className="table-light">
+                                                <tr>
+                                                    <th>Daiktas</th>
+                                                    <th>Inv. Nr.</th>
+                                                    <th>S/N</th>
+                                                    <th>Tipas</th>
+                                                    <th>Išduota</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                {pagedAssets.map(a => (
+                                                    <tr key={a.id}>
+                                                        <td>
+                                                            <strong className="small">{a.item_variant?.item?.name || '—'}</strong>
+                                                            {a.item_variant?.size && (
+                                                                <span className="badge bg-secondary ms-1">{a.item_variant.size}</span>
+                                                            )}
+                                                            <div><code className="small">{a.item_variant?.sku}</code></div>
+                                                        </td>
+                                                        <td><code className="small">{a.inventory_number || '—'}</code></td>
+                                                        <td><code className="small">{a.serial_number || '—'}</code></td>
+                                                        <td>
+                                                            {a.status === 'temporary_issued'
+                                                                ? <span className="badge bg-warning text-dark">Laikinas</span>
+                                                                : <span className="badge bg-success">Išduotas</span>
+                                                            }
+                                                        </td>
+                                                        <td className="small text-muted">{formatDate(a.issued_at)}</td>
+                                                    </tr>
+                                                ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <Pagination page={assetPage} total={filteredAssets.length} pageSize={ASSET_PAGE_SIZE} onPage={setAssetPage} />
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Kiekiniams daiktai */}
                     <div className="card">
                         <div className="card-header d-flex justify-content-between align-items-center">
                             <strong>Mano turimi daiktai</strong>
                             <span className="badge bg-primary">{filteredReturnableItems.length}</span>
                         </div>
-
                         <div className="border-bottom py-2 px-3">
                             <div className="row g-2">
                                 <div className="col-12">
-                                    <input
-                                        type="text"
-                                        className="form-control form-control-sm"
-                                        placeholder="Paieška pagal pavadinimą, SKU..."
-                                        value={itemSearch}
-                                        onChange={e => { setItemSearch(e.target.value); setItemPage(1); }}
-                                    />
+                                    <input type="text" className="form-control form-control-sm"
+                                           placeholder="Paieška pagal pavadinimą, SKU..."
+                                           value={itemSearch}
+                                           onChange={e => { setItemSearch(e.target.value); setItemPage(1); }} />
                                 </div>
                                 <div className="col-6">
                                     <label className="form-label form-label-sm mb-1 text-muted">Nuo</label>
-                                    <input
-                                        type="date"
-                                        className="form-control form-control-sm"
-                                        value={itemDateFrom}
-                                        onChange={e => { setItemDateFrom(e.target.value); setItemPage(1); }}
-                                    />
+                                    <input type="date" className="form-control form-control-sm"
+                                           value={itemDateFrom}
+                                           onChange={e => { setItemDateFrom(e.target.value); setItemPage(1); }} />
                                 </div>
                                 <div className="col-6">
                                     <label className="form-label form-label-sm mb-1 text-muted">Iki</label>
-                                    <input
-                                        type="date"
-                                        className="form-control form-control-sm"
-                                        value={itemDateTo}
-                                        onChange={e => { setItemDateTo(e.target.value); setItemPage(1); }}
-                                    />
+                                    <input type="date" className="form-control form-control-sm"
+                                           value={itemDateTo}
+                                           onChange={e => { setItemDateTo(e.target.value); setItemPage(1); }} />
                                 </div>
                                 {(itemSearch || itemDateFrom || itemDateTo) && (
                                     <div className="col-12">
-                                        <button
-                                            className="btn btn-sm btn-outline-secondary w-100"
-                                            onClick={() => { setItemSearch(''); setItemDateFrom(''); setItemDateTo(''); setItemPage(1); }}
-                                        >
+                                        <button className="btn btn-sm btn-outline-secondary w-100"
+                                                onClick={() => { setItemSearch(''); setItemDateFrom(''); setItemDateTo(''); setItemPage(1); }}>
                                             Išvalyti filtrus
                                         </button>
                                     </div>
                                 )}
                             </div>
                         </div>
-
                         <div className="card-body p-0">
                             {!currentUserId ? (
                                 <div className="p-3 text-center"><div className="spinner-border spinner-border-sm" /></div>
@@ -281,7 +358,7 @@ const MyOrdersView = () => {
                                 <div className="p-3 text-muted small">
                                     {itemSearch || itemDateFrom || itemDateTo
                                         ? 'Nėra daiktų pagal filtrus.'
-                                        : 'Šiuo metu jums nėra išduota daiktų.'}
+                                        : 'Šiuo metu jums nėra išduota kiekinių daiktų.'}
                                 </div>
                             ) : (
                                 <>
@@ -318,7 +395,8 @@ const MyOrdersView = () => {
                                                     </td>
                                                     <td className="small text-muted align-middle">{formatDate(m.movement_date)}</td>
                                                     <td className="align-middle">
-                                                        <button className="btn btn-sm btn-outline-success" onClick={() => openReturnModal(m)}>↩</button>
+                                                        <button className="btn btn-sm btn-outline-success"
+                                                                onClick={() => openReturnModal(m)}>↩</button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -332,7 +410,7 @@ const MyOrdersView = () => {
                     </div>
                 </div>
 
-                {/* DEŠINĖ — Užklausos + Suvartojami */}
+                {/* DEŠINĖ */}
                 <div className="col-md-7">
 
                     {/* Užklausų istorija */}
@@ -341,20 +419,17 @@ const MyOrdersView = () => {
                             <strong>Mano užklausų istorija</strong>
                             <span className="badge bg-secondary">{filteredOrders.length}</span>
                         </div>
-
                         <div className="border-bottom py-2 px-3">
                             <div className="row g-2">
                                 <div className="col-md-4">
-                                    <input
-                                        type="text"
-                                        className="form-control form-control-sm"
-                                        placeholder="Paieška..."
-                                        value={orderFilter.search}
-                                        onChange={e => handleOrderFilterChange('search', e.target.value)}
-                                    />
+                                    <input type="text" className="form-control form-control-sm"
+                                           placeholder="Paieška..."
+                                           value={orderFilter.search}
+                                           onChange={e => handleOrderFilterChange('search', e.target.value)} />
                                 </div>
                                 <div className="col-md-4">
-                                    <select className="form-select form-select-sm" value={orderFilter.type} onChange={e => handleOrderFilterChange('type', e.target.value)}>
+                                    <select className="form-select form-select-sm" value={orderFilter.type}
+                                            onChange={e => handleOrderFilterChange('type', e.target.value)}>
                                         <option value="">Visi tipai</option>
                                         {Object.entries(TYPE_LABELS).map(([k, v]) => (
                                             <option key={k} value={k}>{v}</option>
@@ -362,7 +437,8 @@ const MyOrdersView = () => {
                                     </select>
                                 </div>
                                 <div className="col-md-4">
-                                    <select className="form-select form-select-sm" value={orderFilter.status} onChange={e => handleOrderFilterChange('status', e.target.value)}>
+                                    <select className="form-select form-select-sm" value={orderFilter.status}
+                                            onChange={e => handleOrderFilterChange('status', e.target.value)}>
                                         <option value="">Visi statusai</option>
                                         {Object.entries(STATUS_LABELS).map(([k, v]) => (
                                             <option key={k} value={k}>{v.label}</option>
@@ -371,7 +447,6 @@ const MyOrdersView = () => {
                                 </div>
                             </div>
                         </div>
-
                         {loading ? (
                             <div className="p-3 text-center"><div className="spinner-border spinner-border-sm" /></div>
                         ) : filteredOrders.length === 0 ? (
@@ -397,9 +472,9 @@ const MyOrdersView = () => {
                                             return (
                                                 <tr key={o.id}>
                                                     <td>
-                                                            <span className="badge bg-light text-dark border">
-                                                                {TYPE_LABELS[o.order_type] || o.order_type}
-                                                            </span>
+                                                        <span className="badge bg-light text-dark border">
+                                                            {TYPE_LABELS[o.order_type] || o.order_type}
+                                                        </span>
                                                     </td>
                                                     <td>{item?.name || '—'}</td>
                                                     <td className="text-end">{o.quantity}</td>
@@ -427,17 +502,12 @@ const MyOrdersView = () => {
                                 </div>
                                 <span className="badge bg-secondary">{filteredConsumableItems.length}</span>
                             </div>
-
                             <div className="border-bottom py-2 px-3">
-                                <input
-                                    type="text"
-                                    className="form-control form-control-sm"
-                                    placeholder="Paieška pagal pavadinimą, SKU..."
-                                    value={consumSearch}
-                                    onChange={e => { setConsumSearch(e.target.value); setConsumPage(1); }}
-                                />
+                                <input type="text" className="form-control form-control-sm"
+                                       placeholder="Paieška pagal pavadinimą, SKU..."
+                                       value={consumSearch}
+                                       onChange={e => { setConsumSearch(e.target.value); setConsumPage(1); }} />
                             </div>
-
                             <div className="card-body p-0">
                                 {filteredConsumableItems.length === 0 ? (
                                     <div className="p-3 text-muted small">Nėra rezultatų.</div>
@@ -497,32 +567,26 @@ const MyOrdersView = () => {
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label">Grąžinamas kiekis *</label>
-                                    <input
-                                        type="number" step="0.001" min="0.001"
-                                        max={parseFloat(selectedMovement.quantity)}
-                                        className="form-control"
-                                        value={returnForm.quantity}
-                                        onChange={e => setReturnForm(p => ({ ...p, quantity: e.target.value }))}
-                                    />
+                                    <input type="number" step="0.001" min="0.001"
+                                           max={parseFloat(selectedMovement.quantity)}
+                                           className="form-control"
+                                           value={returnForm.quantity}
+                                           onChange={e => setReturnForm(p => ({ ...p, quantity: e.target.value }))} />
                                     <div className="form-text">Maks.: {parseFloat(selectedMovement.quantity)} vnt.</div>
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label">Priežastis</label>
-                                    <input
-                                        type="text" className="form-control"
-                                        placeholder="Pratybos pasibaigė..."
-                                        value={returnForm.reason}
-                                        onChange={e => setReturnForm(p => ({ ...p, reason: e.target.value }))}
-                                    />
+                                    <input type="text" className="form-control"
+                                           placeholder="Pratybos pasibaigė..."
+                                           value={returnForm.reason}
+                                           onChange={e => setReturnForm(p => ({ ...p, reason: e.target.value }))} />
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label">Papildomas komentaras</label>
-                                    <textarea
-                                        className="form-control" rows="2"
-                                        placeholder="Daiktas šiek tiek susidėvėjęs..."
-                                        value={returnForm.comment}
-                                        onChange={e => setReturnForm(p => ({ ...p, comment: e.target.value }))}
-                                    />
+                                    <textarea className="form-control" rows="2"
+                                              placeholder="Daiktas šiek tiek susidėvėjęs..."
+                                              value={returnForm.comment}
+                                              onChange={e => setReturnForm(p => ({ ...p, comment: e.target.value }))} />
                                 </div>
                             </div>
                             <div className="modal-footer">

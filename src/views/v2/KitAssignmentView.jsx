@@ -97,7 +97,8 @@ const KitAssignmentView = () => {
             setStep(3);
             toast.success('Komplektas išduotas.');
         } catch (e) {
-            toast.error(e.response?.data?.error || e.response?.data?.message || 'Klaida');
+            const msg = e.response?.data?.error || e.response?.data?.message || 'Klaida';
+            toast.error(msg, { autoClose: 6000 });
         } finally {
             setLoading(false);
         }
@@ -348,7 +349,7 @@ const KitAssignmentView = () => {
                 <>
                     <div className="alert alert-success">
                         <h5>✓ Komplektas išduotas</h5>
-                        <div>Judėjimų sukurta: <strong>{result.data?.movements?.length ?? 0}</strong></div>
+                        <div>Judėjimų sukurta: <strong>{result.data?.issued?.length ?? result.data?.movements?.length ?? 0}</strong></div>
                     </div>
 
                     <div className="d-flex gap-2">

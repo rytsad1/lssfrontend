@@ -33,6 +33,8 @@ import ForecastView from './views/v2/ForecastView';
 import InventoryOverviewView from './views/v2/InventoryOverviewView';
 import IssueRequestView from './views/v2/IssueRequestView';
 import ChangePasswordView from './views/v2/ChangePasswordView';
+import CompatibilityGroupsView from './views/v2/CompatibilityGroupsView';
+import ReportsView from './views/v2/ReportsView';
 
 
 import { isAuthenticated } from './auth';
@@ -77,6 +79,8 @@ const AppRouter = () => (
             <Route path="/v2/overview" element={<PrivateRoute><InventoryOverviewView /></PrivateRoute>} />
         <Route path="/v2/issue-request" element={<PrivateRoute><IssueRequestView /></PrivateRoute>} />
         <Route path="/change-password" element={<ChangePasswordView />} />
+            <Route path="/v2/compatibility-groups" element={<PrivateRoute><CompatibilityGroupsView /></PrivateRoute>} />
+            <Route path="/v2/reports" element={<PrivateRoute><ReportsView /></PrivateRoute>} />
 
     </Routes>
 );

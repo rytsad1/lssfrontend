@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import InventoryItemFormModal from '../../components/v2/InventoryItemFormModal';
 import StockBatchFormModal from '../../components/v2/StockBatchFormModal';
 import ItemVariantFormModal from '../../components/v2/ItemVariantFormModal';
+import AssetUnitFormModal from '../../components/v2/AssetUnitFormModal';
 
 const PAGE_SIZE = 15;
 
@@ -17,6 +18,10 @@ const InventoryOverviewView = () => {
     const [totalCount, setTotalCount]     = useState(0);
     const [expanded, setExpanded]         = useState({});
     const [expandedV, setExpandedV]       = useState({});
+
+    const [showAssetModal, setShowAssetModal]   = useState(false);
+    const [selectedAsset, setSelectedAsset]     = useState(null);
+    const [assetVariantCtx, setAssetVariantCtx] = useState(null);
 
     // Rikiavimas
     const [sortCol, setSortCol]   = useState('name');
@@ -312,10 +317,13 @@ const InventoryOverviewView = () => {
                                             return (
                                                 <React.Fragment key={v.id}>
                                                     {/* VARIANT ROW */}
-                                                    <tr style={{ backgroundColor: '#edf2e8', cursor: v.batches?.length > 0 ? 'pointer' : 'default' }}
-                                                        onClick={() => v.batches?.length > 0 && toggleVariant(v.id)}>
+                                                    <tr style={{
+                                                        backgroundColor: '#edf2e8',
+                                                        cursor: (v.batches?.length > 0 || v.asset_units?.length > 0) ? 'pointer' : 'default'
+                                                    }}
+                                                        onClick={() => (v.batches?.length > 0 || v.asset_units?.length > 0) && toggleVariant(v.id)}>
                                                         <td className="text-center align-middle ps-3">
-                                                            {v.batches?.length > 0 && (
+                                                            {(v.batches?.length > 0 || v.asset_units?.length > 0) && (
                                                                 <span style={{
                                                                     display: 'inline-block',
                                                                     transform: vOpen ? 'rotate(180deg)' : 'rotate(90deg)',
@@ -326,37 +334,77 @@ const InventoryOverviewView = () => {
                                                             )}
                                                         </td>
                                                         <td className="align-middle ps-4" colSpan={2}>
-                                                            <code style={{ fontSize: '0.88rem' }}>{v.sku}</code>
+                                                            <code style={{fontSize: '0.88rem'}}>{v.sku}</code>
                                                             <span className="ms-2 text-muted">{v.name}</span>
-                                                            {v.size  && <span className="badge bg-secondary ms-1">{v.size}</span>}
-                                                            {v.color && <span className="badge bg-light text-dark border ms-1">{v.color}</span>}
+                                                            {v.size && <span
+                                                                className="badge bg-secondary ms-1">{v.size}</span>}
+                                                            {v.color && <span
+                                                                className="badge bg-light text-dark border ms-1">{v.color}</span>}
                                                         </td>
                                                         <td className="align-middle">
-                                                                <span className={`badge ${v.is_active ? 'bg-success' : 'bg-danger'}`}>
+                                                                <span
+                                                                    className={`badge ${v.is_active ? 'bg-success' : 'bg-danger'}`}>
                                                                     {v.is_active ? 'Aktyvus' : 'Neaktyvus'}
                                                                 </span>
-                                                            {v.batches?.length > 0 && (
-                                                                <span className="badge bg-light text-dark border ms-1">
-                                                                        {v.batches.length} partij{v.batches.length === 1 ? 'a' : 'os'}
-                                                                    </span>
+                                                            {(item.is_asset || item.is_serialized) ? (
+                                                                v.asset_units?.length > 0 && (
+                                                                    <span className="badge bg-light text-dark border ms-1">
+            {v.asset_units.length} vnt. sandėlyje
+        </span>
+                                                                )
+                                                            ) : (
+                                                                v.batches?.length > 0 && (
+                                                                    <span className="badge bg-light text-dark border ms-1">
+            {v.batches.length} partij{v.batches.length === 1 ? 'a' : 'os'}
+        </span>
+                                                                )
                                                             )}
                                                         </td>
                                                         <td></td>
                                                         <td></td>
                                                         <td className="text-end align-middle">
-                                                                <span className={`fw-bold ${vStock > 0 ? 'text-success' : 'text-muted'}`}>
-                                                                    {vStock % 1 === 0 ? vStock : vStock.toFixed(2)}
-                                                                </span>
+                                                            {item.is_asset || item.is_serialized ? (
+                                                                <span
+                                                                    className={`fw-bold ${(v.available_assets_count ?? 0) > 0 ? 'text-success' : 'text-muted'}`}>
+            {v.available_assets_count ?? 0}
+                                                                    <small className="text-muted ms-1">vnt.</small>
+        </span>
+                                                            ) : (
+                                                                <span
+                                                                    className={`fw-bold ${vStock > 0 ? 'text-success' : 'text-muted'}`}>
+            {vStock % 1 === 0 ? vStock : vStock.toFixed(2)}
+        </span>
+                                                            )}
                                                         </td>
                                                         <td></td>
                                                         <td className="align-middle" onClick={e => e.stopPropagation()}>
                                                             <div className="d-flex gap-1 flex-nowrap">
-                                                                <button className="btn btn-sm btn-outline-primary"
-                                                                        onClick={() => { setBatchVariantCtx(v); setSelectedBatch(null); setShowBatchModal(true); }}>
-                                                                    + Partija
-                                                                </button>
+                                                                {!item.is_asset && !item.is_serialized && (
+                                                                    <button className="btn btn-sm btn-outline-primary"
+                                                                            onClick={() => {
+                                                                                setBatchVariantCtx(v);
+                                                                                setSelectedBatch(null);
+                                                                                setShowBatchModal(true);
+                                                                            }}>
+                                                                        + Partija
+                                                                    </button>
+                                                                )}
+                                                                {item.is_asset && (
+                                                                    <button className="btn btn-sm btn-outline-info"
+                                                                            onClick={() => {
+                                                                                setAssetVariantCtx(v);
+                                                                                setSelectedAsset(null);
+                                                                                setShowAssetModal(true);
+                                                                            }}>
+                                                                        + Asset
+                                                                    </button>
+                                                                )}
                                                                 <button className="btn btn-sm btn-outline-warning"
-                                                                        onClick={() => { setSelectedVariant(v); setVariantItemCtx(item); setShowVariantModal(true); }}>
+                                                                        onClick={() => {
+                                                                            setSelectedVariant(v);
+                                                                            setVariantItemCtx(item);
+                                                                            setShowVariantModal(true);
+                                                                        }}>
                                                                     Redaguoti
                                                                 </button>
                                                                 <button className="btn btn-sm btn-outline-danger"
@@ -367,40 +415,66 @@ const InventoryOverviewView = () => {
                                                         </td>
                                                     </tr>
 
-                                                    {/* BATCHES */}
-                                                    {vOpen && v.batches?.map(b => (
-                                                        <tr key={b.id} className={b.is_expired ? 'table-danger' : ''} style={{ backgroundColor: b.is_expired ? '#f8d7da' : '#f0f4f8' }}>
-                                                            <td></td>
-                                                            <td className="ps-5 align-middle" colSpan={2}>
-                                                                {b.batch_number
-                                                                    ? <code>{b.batch_number}</code>
-                                                                    : <span className="text-muted">#{b.id}</span>}
-                                                                <span className="text-muted ms-2 small">Gauta: {fmt(b.received_date)}</span>
-                                                            </td>
-                                                            <td className="align-middle">
-                                                                <small className="text-muted">{b.source_reference || '—'}</small>
-                                                            </td>
-                                                            <td></td>
-                                                            <td className="text-end align-middle text-muted">{b.quantity_initial}</td>
-                                                            <td className="text-end align-middle">
-                                                                    <span className={`fw-bold ${parseFloat(b.quantity_remaining) > 0 ? 'text-success' : 'text-muted'}`}>
-                                                                        {b.quantity_remaining}
-                                                                    </span>
-                                                            </td>
-                                                            <td className="align-middle">{expirationCell(b)}</td>
-                                                            <td className="align-middle">
-                                                                <div className="d-flex gap-1 flex-nowrap">
+                                                    {/* BATCHES arba ASSET UNITS */}
+                                                    {vOpen && (item.is_asset || item.is_serialized ? (
+                                                        v.asset_units?.map(a => (
+                                                            <tr key={a.id} style={{ backgroundColor: '#f0f4f8' }}>
+                                                                <td></td>
+                                                                <td className="ps-5 align-middle" colSpan={2}>
+                                                                    <code>{a.inventory_number || `#${a.id}`}</code>
+                                                                    {a.serial_number && <span className="text-muted ms-2 small">S/N: {a.serial_number}</span>}
+                                                                    {a.imei && <span className="text-muted ms-2 small">IMEI: {a.imei}</span>}
+                                                                </td>
+                                                                <td className="align-middle">
+                                                                    <span className="badge bg-success">Sandėlyje</span>
+                                                                </td>
+                                                                <td></td>
+                                                                <td></td>
+                                                                <td></td>
+                                                                <td></td>
+                                                                <td className="align-middle">
                                                                     <button className="btn btn-sm btn-outline-warning"
-                                                                            onClick={() => { setSelectedBatch(b); setBatchVariantCtx(v); setShowBatchModal(true); }}>
+                                                                            onClick={() => { setSelectedAsset(a); setAssetVariantCtx(v); setShowAssetModal(true); }}>
                                                                         Redaguoti
                                                                     </button>
-                                                                    <button className="btn btn-sm btn-outline-danger"
-                                                                            onClick={() => deleteBatch(b)}>
-                                                                        Šalinti
-                                                                    </button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    ) : (
+                                                        v.batches?.map(b => (
+                                                            <tr key={b.id} className={b.is_expired ? 'table-danger' : ''} style={{ backgroundColor: b.is_expired ? '#f8d7da' : '#f0f4f8' }}>
+                                                                <td></td>
+                                                                <td className="ps-5 align-middle" colSpan={2}>
+                                                                    {b.batch_number
+                                                                        ? <code>{b.batch_number}</code>
+                                                                        : <span className="text-muted">#{b.id}</span>}
+                                                                    <span className="text-muted ms-2 small">Gauta: {fmt(b.received_date)}</span>
+                                                                </td>
+                                                                <td className="align-middle">
+                                                                    <small className="text-muted">{b.source_reference || '—'}</small>
+                                                                </td>
+                                                                <td></td>
+                                                                <td className="text-end align-middle text-muted">{b.quantity_initial}</td>
+                                                                <td className="text-end align-middle">
+                <span className={`fw-bold ${parseFloat(b.quantity_remaining) > 0 ? 'text-success' : 'text-muted'}`}>
+                    {b.quantity_remaining}
+                </span>
+                                                                </td>
+                                                                <td className="align-middle">{expirationCell(b)}</td>
+                                                                <td className="align-middle">
+                                                                    <div className="d-flex gap-1 flex-nowrap">
+                                                                        <button className="btn btn-sm btn-outline-warning"
+                                                                                onClick={() => { setSelectedBatch(b); setBatchVariantCtx(v); setShowBatchModal(true); }}>
+                                                                            Redaguoti
+                                                                        </button>
+                                                                        <button className="btn btn-sm btn-outline-danger"
+                                                                                onClick={() => deleteBatch(b)}>
+                                                                            Šalinti
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        ))
                                                     ))}
                                                 </React.Fragment>
                                             );
@@ -466,6 +540,13 @@ const InventoryOverviewView = () => {
                 itemCode={variantItemCtx?.code}
                 onClose={() => setShowVariantModal(false)}
                 onSuccess={() => { setShowVariantModal(false); fetchItems(page, search, activeFilter, sortCol, sortDir); }}
+            />
+            <AssetUnitFormModal
+                show={showAssetModal}
+                asset={selectedAsset}
+                presetVariantId={assetVariantCtx?.id}
+                onClose={() => setShowAssetModal(false)}
+                onSuccess={() => { setShowAssetModal(false); fetchItems(page, search, activeFilter, sortCol, sortDir); }}
             />
         </div>
     );

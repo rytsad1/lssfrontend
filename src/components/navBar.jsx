@@ -39,21 +39,36 @@ const NavBar = () => {
                             Sandėlys
                         </a>
                         <ul className="dropdown-menu">
-                            <li><Link className="dropdown-item" to="/v2/overview">Inventorius (likučiai, daiktai, variantai, partijos)</Link></li>
-                            <li><hr className="dropdown-divider"/></li>
+                            <li><Link className="dropdown-item" to="/v2/overview">Inventorius (likučiai, daiktai,
+                                variantai, partijos)</Link></li>
+                            <li>
+                                <hr className="dropdown-divider"/>
+                            </li>
                             <li><Link className="dropdown-item" to="/v2/issue">Išdavimas</Link></li>
                             <li><Link className="dropdown-item" to="/v2/writeoff">Nurašymas</Link></li>
                             <li><Link className="dropdown-item" to="/v2/kits">Komplektai</Link></li>
                             <li><Link className="dropdown-item" to="/v2/kit-assignment">Komplekto išdavimas</Link></li>
-                            <li><hr className="dropdown-divider"/></li>
+                            <li>
+                                <hr className="dropdown-divider"/>
+                            </li>
                             <li><Link className="dropdown-item" to="/v2/movements">Judėjimų istorija</Link></li>
-                            <li><hr className="dropdown-divider"/></li>
+                            <li>
+                                <hr className="dropdown-divider"/>
+                            </li>
                             <li><Link className="dropdown-item" to="/v2/my-orders">Mano daiktai</Link></li>
                             <li><Link className="dropdown-item" to="/v2/warehouse-orders">Sandėlio užklausos</Link></li>
                             <li><Link className="dropdown-item" to="/v2/issue-request">Prašyti išduoti</Link></li>
-                            <li><hr className="dropdown-divider"/></li>
+                            <li>
+                                <hr className="dropdown-divider"/>
+                            </li>
                             <li><Link className="dropdown-item" to="/v2/forecast">Paklausos prognozė</Link></li>
                             <li><Link className="dropdown-item" to="/v2/anomalies">Anomalijos</Link></li>
+                            <li>
+                                <hr className="dropdown-divider"/>
+                            </li>
+                            <li><Link className="dropdown-item" to="/v2/compatibility-groups">Suderinamumo grupės</Link>
+                            </li>
+                            <li><Link className="dropdown-item" to="/v2/reports">Ataskaitos</Link></li>
                         </ul>
                     </li>
 

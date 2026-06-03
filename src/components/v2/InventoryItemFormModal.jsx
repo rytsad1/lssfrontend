@@ -11,6 +11,7 @@ const emptyVariant = () => ({
     model: '',
     is_active: true,
     batches: [emptyBatch()],
+    assets: [emptyAsset()],
 });
 
 const emptyBatch = () => ({
@@ -23,6 +24,14 @@ const emptyBatch = () => ({
     notes: '',
 });
 
+const emptyAsset = () => ({
+    tempId: Date.now() + Math.random(),
+    inventory_number: '',
+    serial_number: '',
+    imei: '',
+    notes: '',
+});
+
 const initialItemState = {
     code: '',
     name: '',
@@ -32,33 +41,35 @@ const initialItemState = {
     is_asset: false,
     is_serialized: false,
     is_active: true,
+    unique_per_user: false,
 };
 
 const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
     const isEdit = !!item;
-
-    const [step, setStep] = useState(1); // 1=daiktas, 2=variantai, 3=partijos
+    const [step, setStep] = useState(1);
     const [form, setForm] = useState(initialItemState);
     const [variants, setVariants] = useState([emptyVariant()]);
     const [addVariants, setAddVariants] = useState(true);
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
 
+    const isAssetItem = form.is_asset || form.is_serialized;
+
     useEffect(() => {
         if (!show) return;
         setStep(1);
         setErrors({});
-
         if (item) {
             setForm({
-                code: item.code || '',
-                name: item.name || '',
-                description: item.description || '',
-                unit_of_measure: item.unit_of_measure || 'vnt',
-                is_expirable: !!item.is_expirable,
-                is_asset: !!item.is_asset,
-                is_serialized: !!item.is_serialized,
-                is_active: item.is_active !== false,
+                code:           item.code            || '',
+                name:           item.name            || '',
+                description:    item.description     || '',
+                unit_of_measure:item.unit_of_measure || 'vnt',
+                is_expirable:   !!item.is_expirable,
+                is_asset:       !!item.is_asset,
+                is_serialized:  !!item.is_serialized,
+                is_active:      item.is_active !== false,
+                unique_per_user:!!item.unique_per_user,
             });
             setAddVariants(false);
             setVariants([emptyVariant()]);
@@ -69,14 +80,12 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
         }
     }, [item, show]);
 
-    // Auto-generuojam SKU variantams pagal item kodą
     useEffect(() => {
         if (!form.code || isEdit) return;
         setVariants(prev => prev.map((v, i) => ({
             ...v,
             sku: v.sku || `${form.code}-${i + 1}`,
         })));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [form.code]);
 
     const handleItemChange = (e) => {
@@ -84,11 +93,9 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
         setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
-    // --- Variant handlers ---
+    // Variant handlers
     const handleVariantChange = (vIdx, field, value) => {
-        setVariants(prev => prev.map((v, i) =>
-            i === vIdx ? { ...v, [field]: value } : v
-        ));
+        setVariants(prev => prev.map((v, i) => i === vIdx ? { ...v, [field]: value } : v));
     };
 
     const handleAddVariant = () => {
@@ -98,23 +105,15 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
     };
 
     const handleRemoveVariant = (vIdx) => {
-        if (variants.length === 1) {
-            toast.warning('Turi būti bent vienas variantas.');
-            return;
-        }
+        if (variants.length === 1) { toast.warning('Turi būti bent vienas variantas.'); return; }
         setVariants(prev => prev.filter((_, i) => i !== vIdx));
     };
 
-    // --- Batch handlers ---
+    // Batch handlers
     const handleBatchChange = (vIdx, bIdx, field, value) => {
         setVariants(prev => prev.map((v, i) => {
             if (i !== vIdx) return v;
-            return {
-                ...v,
-                batches: v.batches.map((b, j) =>
-                    j === bIdx ? { ...b, [field]: value } : b
-                ),
-            };
+            return { ...v, batches: v.batches.map((b, j) => j === bIdx ? { ...b, [field]: value } : b) };
         }));
     };
 
@@ -127,15 +126,34 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
     const handleRemoveBatch = (vIdx, bIdx) => {
         setVariants(prev => prev.map((v, i) => {
             if (i !== vIdx) return v;
-            if (v.batches.length === 1) {
-                toast.warning('Turi būti bent viena partija.');
-                return v;
-            }
+            if (v.batches.length === 1) { toast.warning('Turi būti bent viena partija.'); return v; }
             return { ...v, batches: v.batches.filter((_, j) => j !== bIdx) };
         }));
     };
 
-    // --- Validation ---
+    // Asset handlers
+    const handleAssetChange = (vIdx, aIdx, field, value) => {
+        setVariants(prev => prev.map((v, i) => {
+            if (i !== vIdx) return v;
+            return { ...v, assets: v.assets.map((a, j) => j === aIdx ? { ...a, [field]: value } : a) };
+        }));
+    };
+
+    const handleAddAsset = (vIdx) => {
+        setVariants(prev => prev.map((v, i) =>
+            i === vIdx ? { ...v, assets: [...v.assets, emptyAsset()] } : v
+        ));
+    };
+
+    const handleRemoveAsset = (vIdx, aIdx) => {
+        setVariants(prev => prev.map((v, i) => {
+            if (i !== vIdx) return v;
+            if (v.assets.length === 1) { toast.warning('Turi būti bent vienas vienetas.'); return v; }
+            return { ...v, assets: v.assets.filter((_, j) => j !== aIdx) };
+        }));
+    };
+
+    // Validation
     const validateStep1 = () => {
         const e = {};
         if (!form.code.trim()) e.code = ['Kodas privalomas'];
@@ -157,25 +175,24 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
 
     const validateStep3 = () => {
         const e = {};
-        variants.forEach((v, vIdx) => {
-            v.batches.forEach((b, bIdx) => {
-                if (!b.quantity_initial && b.quantity_initial !== 0) {
-                    e[`batch_${vIdx}_${bIdx}_qty`] = ['Kiekis privalomas'];
-                }
+        if (!isAssetItem) {
+            variants.forEach((v, vIdx) => {
+                v.batches.forEach((b, bIdx) => {
+                    if (!b.quantity_initial && b.quantity_initial !== 0) {
+                        e[`batch_${vIdx}_${bIdx}_qty`] = ['Kiekis privalomas'];
+                    }
+                });
             });
-        });
+        }
         setErrors(e);
         return Object.keys(e).length === 0;
     };
 
-    // --- Submit ---
     const handleSubmit = async () => {
         setSubmitting(true);
         setErrors({});
-
         try {
             let savedItem;
-
             if (isEdit) {
                 const res = await axios.put(`/v2/inventory/items/${item.id}`, form);
                 savedItem = res.data.data;
@@ -188,31 +205,50 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
             if (!isEdit && addVariants) {
                 for (const v of variants) {
                     const varRes = await axios.post('/v2/inventory/variants', {
-                        item_id: savedItem.id,
-                        sku: v.sku,
-                        name: v.name,
-                        size: v.size || null,
-                        color: v.color || null,
-                        model: v.model || null,
+                        item_id:  savedItem.id,
+                        sku:      v.sku,
+                        name:     v.name,
+                        size:     v.size  || null,
+                        color:    v.color || null,
+                        model:    v.model || null,
                         is_active: v.is_active,
                     });
                     const savedVariant = varRes.data.data;
 
-                    for (const b of v.batches) {
-                        if (!b.quantity_initial) continue;
-                        await axios.post('/v2/inventory/batches', {
-                            item_variant_id: savedVariant.id,
-                            batch_number: b.batch_number || null,
-                            received_date: b.received_date || null,
-                            quantity_initial: parseFloat(b.quantity_initial),
-                            quantity_remaining: parseFloat(b.quantity_initial),
-                            expiration_date: b.expiration_date || null,
-                            source_reference: b.source_reference || null,
-                            notes: b.notes || null,
-                        });
+                    if (isAssetItem) {
+                        // Kuriame asset vienetus
+                        for (const a of v.assets) {
+                            if (!a.inventory_number && !a.serial_number) continue;
+                            await axios.post('/v2/inventory/asset-units', {
+                                item_variant_id:  savedVariant.id,
+                                inventory_number: a.inventory_number || null,
+                                serial_number:    a.serial_number    || null,
+                                imei:             a.imei             || null,
+                                notes:            a.notes            || null,
+                                status:           'in_stock',
+                            });
+                        }
+                    } else {
+                        // Kuriame partijas
+                        for (const b of v.batches) {
+                            if (!b.quantity_initial) continue;
+                            await axios.post('/v2/inventory/batches', {
+                                item_variant_id:    savedVariant.id,
+                                batch_number:       b.batch_number    || null,
+                                received_date:      b.received_date   || null,
+                                quantity_initial:   parseFloat(b.quantity_initial),
+                                quantity_remaining: parseFloat(b.quantity_initial),
+                                expiration_date:    b.expiration_date || null,
+                                source_reference:   b.source_reference || null,
+                                notes:              b.notes           || null,
+                            });
+                        }
                     }
                 }
-                toast.success('Daiktas, variantai ir partijos sukurti.');
+                toast.success(isAssetItem
+                    ? 'Daiktas, variantai ir asset vienetai sukurti.'
+                    : 'Daiktas, variantai ir partijos sukurti.'
+                );
             }
 
             onSuccess();
@@ -233,13 +269,13 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
     if (!show) return null;
 
     const totalSteps = isEdit ? 1 : (addVariants ? 3 : 1);
+    const step3Label = isAssetItem ? 'Vienetai' : 'Partijos';
 
     return (
         <div className="modal d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.5)' }}>
             <div className="modal-dialog modal-xl">
                 <div className="modal-content">
 
-                    {/* Header */}
                     <div className="modal-header">
                         <div>
                             <h5 className="modal-title mb-1">
@@ -247,14 +283,11 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
                             </h5>
                             {!isEdit && (
                                 <div className="d-flex gap-2">
-                                    {['Daiktas', 'Variantai', 'Partijos'].map((label, i) => {
+                                    {['Daiktas', 'Variantai', step3Label].map((label, i) => {
                                         if (!addVariants && i > 0) return null;
                                         const n = i + 1;
                                         return (
-                                            <span
-                                                key={n}
-                                                className={`badge ${step === n ? 'bg-primary' : step > n ? 'bg-success' : 'bg-secondary'}`}
-                                            >
+                                            <span key={n} className={`badge ${step === n ? 'bg-primary' : step > n ? 'bg-success' : 'bg-secondary'}`}>
                                                 {n}. {label}
                                             </span>
                                         );
@@ -265,7 +298,6 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
                         <button type="button" className="btn-close" onClick={onClose} />
                     </div>
 
-                    {/* Body */}
                     <div className="modal-body">
 
                         {/* STEP 1 — Daiktas */}
@@ -274,91 +306,70 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
                                 <div className="row">
                                     <div className="col-md-4 mb-3">
                                         <label className="form-label">Kodas *</label>
-                                        <input
-                                            type="text"
-                                            name="code"
-                                            className={`form-control ${errors.code ? 'is-invalid' : ''}`}
-                                            value={form.code}
-                                            onChange={handleItemChange}
-                                        />
+                                        <input type="text" name="code"
+                                               className={`form-control ${errors.code ? 'is-invalid' : ''}`}
+                                               value={form.code} onChange={handleItemChange} />
                                         {errors.code && <div className="invalid-feedback">{errors.code[0]}</div>}
                                     </div>
                                     <div className="col-md-8 mb-3">
                                         <label className="form-label">Pavadinimas *</label>
-                                        <input
-                                            type="text"
-                                            name="name"
-                                            className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                                            value={form.name}
-                                            onChange={handleItemChange}
-                                        />
+                                        <input type="text" name="name"
+                                               className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                                               value={form.name} onChange={handleItemChange} />
                                         {errors.name && <div className="invalid-feedback">{errors.name[0]}</div>}
                                     </div>
                                 </div>
-
                                 <div className="row">
                                     <div className="col-md-8 mb-3">
                                         <label className="form-label">Aprašymas</label>
-                                        <textarea
-                                            name="description"
-                                            className="form-control"
-                                            rows="2"
-                                            value={form.description}
-                                            onChange={handleItemChange}
-                                        />
+                                        <textarea name="description" className="form-control" rows="2"
+                                                  value={form.description} onChange={handleItemChange} />
                                     </div>
                                     <div className="col-md-4 mb-3">
                                         <label className="form-label">Matavimo vienetas *</label>
-                                        <input
-                                            type="text"
-                                            name="unit_of_measure"
-                                            className={`form-control ${errors.unit_of_measure ? 'is-invalid' : ''}`}
-                                            value={form.unit_of_measure}
-                                            onChange={handleItemChange}
-                                            placeholder="vnt, kg, l..."
-                                        />
+                                        <input type="text" name="unit_of_measure"
+                                               className={`form-control ${errors.unit_of_measure ? 'is-invalid' : ''}`}
+                                               value={form.unit_of_measure} onChange={handleItemChange}
+                                               placeholder="vnt, kg, l..." />
                                         {errors.unit_of_measure && <div className="invalid-feedback">{errors.unit_of_measure[0]}</div>}
                                     </div>
                                 </div>
-
                                 <hr />
                                 <h6 className="text-muted">Savybės</h6>
                                 <div className="row">
                                     {[
-                                        { name: 'is_expirable', label: 'Galiojantis (maistas, degalai — išdavus automatiškai nurašomas)' },
-                                        { name: 'is_asset', label: 'Ilgalaikis turtas' },
-                                        { name: 'is_serialized', label: 'Vienetinis (su S/N)' },
-                                        { name: 'is_active', label: 'Aktyvus' },
+                                        { name: 'is_expirable',    label: 'Galiojantis (išdavus automatiškai nurašomas)' },
+                                        { name: 'is_asset',        label: 'Ilgalaikis turtas (asset)' },
+                                        { name: 'is_serialized',   label: 'Vienetinis su S/N' },
+                                        { name: 'is_active',       label: 'Aktyvus' },
+                                        { name: 'unique_per_user', label: 'Unikalus naudotojui (negali turėti 2x)' },
                                     ].map(({ name, label }) => (
-                                        <div className="col-md-3" key={name}>
+                                        <div className="col-md-4 mb-2" key={name}>
                                             <div className="form-check">
-                                                <input
-                                                    type="checkbox"
-                                                    name={name}
-                                                    id={name}
-                                                    className="form-check-input"
-                                                    checked={form[name]}
-                                                    onChange={handleItemChange}
-                                                />
-                                                <label htmlFor={name} className="form-check-label">{label}</label>
+                                                <input type="checkbox" name={name} id={name}
+                                                       className="form-check-input"
+                                                       checked={form[name]} onChange={handleItemChange} />
+                                                <label htmlFor={name} className="form-check-label small">{label}</label>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
 
+                                {isAssetItem && (
+                                    <div className="alert alert-info mt-3 mb-0 py-2 small">
+                                        <strong>Asset / Serijinis daiktas</strong> — vietoje partijų bus kuriami individualūs vienetai (su inventoriniu numeriu ir S/N).
+                                    </div>
+                                )}
+
                                 {!isEdit && (
                                     <div className="mt-3 p-3 bg-light rounded">
                                         <div className="form-check">
-                                            <input
-                                                type="checkbox"
-                                                id="addVariants"
-                                                className="form-check-input"
-                                                checked={addVariants}
-                                                onChange={(e) => setAddVariants(e.target.checked)}
-                                            />
+                                            <input type="checkbox" id="addVariants" className="form-check-input"
+                                                   checked={addVariants}
+                                                   onChange={(e) => setAddVariants(e.target.checked)} />
                                             <label htmlFor="addVariants" className="form-check-label">
-                                                <strong>Pridėti variantus ir partijas dabar</strong>
-                                                <div className="text-muted small">Jei nežymi — daiktas bus sukurtas tuščias, variantus galėsi pridėti vėliau.</div>
+                                                <strong>Pridėti variantus ir {isAssetItem ? 'asset vienetus' : 'partijas'} dabar</strong>
+                                                <div className="text-muted small">Jei nežymi — daiktas bus sukurtas tuščias.</div>
                                             </label>
                                         </div>
                                     </div>
@@ -383,10 +394,8 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
                                     <div key={v.tempId} className="card mb-3 border-primary">
                                         <div className="card-header d-flex justify-content-between align-items-center py-2">
                                             <span className="fw-bold">Variantas {vIdx + 1}</span>
-                                            <button
-                                                className="btn btn-sm btn-outline-danger"
-                                                onClick={() => handleRemoveVariant(vIdx)}
-                                            >
+                                            <button className="btn btn-sm btn-outline-danger"
+                                                    onClick={() => handleRemoveVariant(vIdx)}>
                                                 ✕ Pašalinti
                                             </button>
                                         </div>
@@ -394,63 +403,46 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
                                             <div className="row">
                                                 <div className="col-md-4 mb-2">
                                                     <label className="form-label form-label-sm">SKU *</label>
-                                                    <input
-                                                        type="text"
-                                                        className={`form-control form-control-sm ${errors[`variant_${vIdx}_sku`] ? 'is-invalid' : ''}`}
-                                                        value={v.sku}
-                                                        onChange={(e) => handleVariantChange(vIdx, 'sku', e.target.value)}
-                                                        placeholder={`${form.code}-${vIdx + 1}`}
-                                                    />
+                                                    <input type="text"
+                                                           className={`form-control form-control-sm ${errors[`variant_${vIdx}_sku`] ? 'is-invalid' : ''}`}
+                                                           value={v.sku}
+                                                           onChange={(e) => handleVariantChange(vIdx, 'sku', e.target.value)}
+                                                           placeholder={`${form.code}-${vIdx + 1}`} />
                                                     {errors[`variant_${vIdx}_sku`] && <div className="invalid-feedback">{errors[`variant_${vIdx}_sku`][0]}</div>}
                                                 </div>
                                                 <div className="col-md-4 mb-2">
                                                     <label className="form-label form-label-sm">Pavadinimas *</label>
-                                                    <input
-                                                        type="text"
-                                                        className={`form-control form-control-sm ${errors[`variant_${vIdx}_name`] ? 'is-invalid' : ''}`}
-                                                        value={v.name}
-                                                        onChange={(e) => handleVariantChange(vIdx, 'name', e.target.value)}
-                                                        placeholder={form.name}
-                                                    />
+                                                    <input type="text"
+                                                           className={`form-control form-control-sm ${errors[`variant_${vIdx}_name`] ? 'is-invalid' : ''}`}
+                                                           value={v.name}
+                                                           onChange={(e) => handleVariantChange(vIdx, 'name', e.target.value)}
+                                                           placeholder={form.name} />
                                                     {errors[`variant_${vIdx}_name`] && <div className="invalid-feedback">{errors[`variant_${vIdx}_name`][0]}</div>}
                                                 </div>
                                                 <div className="col-md-4 mb-2">
                                                     <label className="form-label form-label-sm">Dydis</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control form-control-sm"
-                                                        value={v.size}
-                                                        onChange={(e) => handleVariantChange(vIdx, 'size', e.target.value)}
-                                                        placeholder="S, M, L, 42..."
-                                                    />
+                                                    <input type="text" className="form-control form-control-sm"
+                                                           value={v.size}
+                                                           onChange={(e) => handleVariantChange(vIdx, 'size', e.target.value)}
+                                                           placeholder="S, M, L, 42..." />
                                                 </div>
                                                 <div className="col-md-4 mb-2">
                                                     <label className="form-label form-label-sm">Spalva</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control form-control-sm"
-                                                        value={v.color}
-                                                        onChange={(e) => handleVariantChange(vIdx, 'color', e.target.value)}
-                                                    />
+                                                    <input type="text" className="form-control form-control-sm"
+                                                           value={v.color}
+                                                           onChange={(e) => handleVariantChange(vIdx, 'color', e.target.value)} />
                                                 </div>
                                                 <div className="col-md-4 mb-2">
                                                     <label className="form-label form-label-sm">Modelis</label>
-                                                    <input
-                                                        type="text"
-                                                        className="form-control form-control-sm"
-                                                        value={v.model}
-                                                        onChange={(e) => handleVariantChange(vIdx, 'model', e.target.value)}
-                                                    />
+                                                    <input type="text" className="form-control form-control-sm"
+                                                           value={v.model}
+                                                           onChange={(e) => handleVariantChange(vIdx, 'model', e.target.value)} />
                                                 </div>
                                                 <div className="col-md-4 mb-2 d-flex align-items-end">
                                                     <div className="form-check">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="form-check-input"
-                                                            id={`v_active_${vIdx}`}
-                                                            checked={v.is_active}
-                                                            onChange={(e) => handleVariantChange(vIdx, 'is_active', e.target.checked)}
-                                                        />
+                                                        <input type="checkbox" className="form-check-input"
+                                                               id={`v_active_${vIdx}`} checked={v.is_active}
+                                                               onChange={(e) => handleVariantChange(vIdx, 'is_active', e.target.checked)} />
                                                         <label htmlFor={`v_active_${vIdx}`} className="form-check-label small">Aktyvus</label>
                                                     </div>
                                                 </div>
@@ -461,137 +453,164 @@ const InventoryItemFormModal = ({ show, item, onClose, onSuccess }) => {
                             </>
                         )}
 
-                        {/* STEP 3 — Partijos */}
+                        {/* STEP 3 — Asset vienetai arba Partijos */}
                         {step === 3 && (
                             <>
-                                <p className="text-muted">Nustatyk pradinį kiekį kiekvienam variantui. Kiekis <strong>0</strong> — partija nebus sukurta.</p>
-
-                                {variants.map((v, vIdx) => (
-                                    <div key={v.tempId} className="card mb-4">
-                                        <div className="card-header d-flex justify-content-between align-items-center py-2">
-                                            <span className="fw-bold">
-                                                <code>{v.sku}</code> — {v.name}
-                                                {v.size && <span className="badge bg-secondary ms-2">{v.size}</span>}
-                                            </span>
-                                            <button
-                                                className="btn btn-sm btn-outline-primary"
-                                                onClick={() => handleAddBatch(vIdx)}
-                                            >
-                                                + Partija
-                                            </button>
-                                        </div>
-                                        <div className="card-body p-2">
-                                            {v.batches.map((b, bIdx) => (
-                                                <div key={b.tempId} className="border rounded p-2 mb-2">
-                                                    <div className="d-flex justify-content-between align-items-center mb-2">
-                                                        <small className="text-muted fw-bold">Partija {bIdx + 1}</small>
-                                                        {v.batches.length > 1 && (
-                                                            <button
-                                                                className="btn btn-sm btn-outline-danger py-0"
-                                                                onClick={() => handleRemoveBatch(vIdx, bIdx)}
-                                                            >✕</button>
-                                                        )}
-                                                    </div>
-                                                    <div className="row g-2">
-                                                        <div className="col-md-2">
-                                                            <label className="form-label form-label-sm">Kiekis *</label>
-                                                            <input
-                                                                type="number"
-                                                                step="0.001"
-                                                                className={`form-control form-control-sm ${errors[`batch_${vIdx}_${bIdx}_qty`] ? 'is-invalid' : ''}`}
-                                                                value={b.quantity_initial}
-                                                                onChange={(e) => handleBatchChange(vIdx, bIdx, 'quantity_initial', e.target.value)}
-                                                                placeholder="0"
-                                                            />
-                                                            {errors[`batch_${vIdx}_${bIdx}_qty`] && <div className="invalid-feedback">{errors[`batch_${vIdx}_${bIdx}_qty`][0]}</div>}
-                                                        </div>
-                                                        <div className="col-md-2">
-                                                            <label className="form-label form-label-sm">Partijos Nr.</label>
-                                                            <input
-                                                                type="text"
-                                                                className="form-control form-control-sm"
-                                                                value={b.batch_number}
-                                                                onChange={(e) => handleBatchChange(vIdx, bIdx, 'batch_number', e.target.value)}
-                                                                placeholder="BATCH-001"
-                                                            />
-                                                        </div>
-                                                        <div className="col-md-2">
-                                                            <label className="form-label form-label-sm">Gavimo data</label>
-                                                            <input
-                                                                type="date"
-                                                                className="form-control form-control-sm"
-                                                                value={b.received_date}
-                                                                onChange={(e) => handleBatchChange(vIdx, bIdx, 'received_date', e.target.value)}
-                                                            />
-                                                        </div>
-                                                        <div className="col-md-2">
-                                                            <label className="form-label form-label-sm">Galioja iki</label>
-                                                            <input
-                                                                type="date"
-                                                                className="form-control form-control-sm"
-                                                                value={b.expiration_date}
-                                                                onChange={(e) => handleBatchChange(vIdx, bIdx, 'expiration_date', e.target.value)}
-                                                            />
-                                                        </div>
-                                                        <div className="col-md-4">
-                                                            <label className="form-label form-label-sm">Šaltinis / Pastabos</label>
-                                                            <input
-                                                                type="text"
-                                                                className="form-control form-control-sm"
-                                                                value={b.source_reference}
-                                                                onChange={(e) => handleBatchChange(vIdx, bIdx, 'source_reference', e.target.value)}
-                                                                placeholder="Sąskaita, Excel..."
-                                                            />
-                                                        </div>
-                                                    </div>
+                                {isAssetItem ? (
+                                    <>
+                                        <p className="text-muted">Pridėk individualius vienetus su inventoriniais numeriais ir/arba serijos numeriais.</p>
+                                        {variants.map((v, vIdx) => (
+                                            <div key={v.tempId} className="card mb-4">
+                                                <div className="card-header d-flex justify-content-between align-items-center py-2">
+                                                    <span className="fw-bold">
+                                                        <code>{v.sku}</code> — {v.name}
+                                                        {v.size && <span className="badge bg-secondary ms-2">{v.size}</span>}
+                                                    </span>
+                                                    <button className="btn btn-sm btn-outline-primary"
+                                                            onClick={() => handleAddAsset(vIdx)}>
+                                                        + Vienetas
+                                                    </button>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
+                                                <div className="card-body p-2">
+                                                    {v.assets.map((a, aIdx) => (
+                                                        <div key={a.tempId} className="border rounded p-2 mb-2">
+                                                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                                                <small className="text-muted fw-bold">Vienetas {aIdx + 1}</small>
+                                                                {v.assets.length > 1 && (
+                                                                    <button className="btn btn-sm btn-outline-danger py-0"
+                                                                            onClick={() => handleRemoveAsset(vIdx, aIdx)}>✕</button>
+                                                                )}
+                                                            </div>
+                                                            <div className="row g-2">
+                                                                <div className="col-md-3">
+                                                                    <label className="form-label form-label-sm">Inv. numeris</label>
+                                                                    <input type="text" className="form-control form-control-sm"
+                                                                           value={a.inventory_number}
+                                                                           onChange={(e) => handleAssetChange(vIdx, aIdx, 'inventory_number', e.target.value)}
+                                                                           placeholder="INV-001" />
+                                                                </div>
+                                                                <div className="col-md-3">
+                                                                    <label className="form-label form-label-sm">Serijos nr. (S/N)</label>
+                                                                    <input type="text" className="form-control form-control-sm"
+                                                                           value={a.serial_number}
+                                                                           onChange={(e) => handleAssetChange(vIdx, aIdx, 'serial_number', e.target.value)}
+                                                                           placeholder="SN-12345" />
+                                                                </div>
+                                                                <div className="col-md-3">
+                                                                    <label className="form-label form-label-sm">IMEI</label>
+                                                                    <input type="text" className="form-control form-control-sm"
+                                                                           value={a.imei}
+                                                                           onChange={(e) => handleAssetChange(vIdx, aIdx, 'imei', e.target.value)}
+                                                                           placeholder="Telefonams" />
+                                                                </div>
+                                                                <div className="col-md-3">
+                                                                    <label className="form-label form-label-sm">Pastabos</label>
+                                                                    <input type="text" className="form-control form-control-sm"
+                                                                           value={a.notes}
+                                                                           onChange={(e) => handleAssetChange(vIdx, aIdx, 'notes', e.target.value)} />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-muted">Nustatyk pradinį kiekį kiekvienam variantui.</p>
+                                        {variants.map((v, vIdx) => (
+                                            <div key={v.tempId} className="card mb-4">
+                                                <div className="card-header d-flex justify-content-between align-items-center py-2">
+                                                    <span className="fw-bold">
+                                                        <code>{v.sku}</code> — {v.name}
+                                                        {v.size && <span className="badge bg-secondary ms-2">{v.size}</span>}
+                                                    </span>
+                                                    <button className="btn btn-sm btn-outline-primary"
+                                                            onClick={() => handleAddBatch(vIdx)}>
+                                                        + Partija
+                                                    </button>
+                                                </div>
+                                                <div className="card-body p-2">
+                                                    {v.batches.map((b, bIdx) => (
+                                                        <div key={b.tempId} className="border rounded p-2 mb-2">
+                                                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                                                <small className="text-muted fw-bold">Partija {bIdx + 1}</small>
+                                                                {v.batches.length > 1 && (
+                                                                    <button className="btn btn-sm btn-outline-danger py-0"
+                                                                            onClick={() => handleRemoveBatch(vIdx, bIdx)}>✕</button>
+                                                                )}
+                                                            </div>
+                                                            <div className="row g-2">
+                                                                <div className="col-md-2">
+                                                                    <label className="form-label form-label-sm">Kiekis *</label>
+                                                                    <input type="number" step="0.001"
+                                                                           className={`form-control form-control-sm ${errors[`batch_${vIdx}_${bIdx}_qty`] ? 'is-invalid' : ''}`}
+                                                                           value={b.quantity_initial}
+                                                                           onChange={(e) => handleBatchChange(vIdx, bIdx, 'quantity_initial', e.target.value)}
+                                                                           placeholder="0" />
+                                                                    {errors[`batch_${vIdx}_${bIdx}_qty`] && <div className="invalid-feedback">{errors[`batch_${vIdx}_${bIdx}_qty`][0]}</div>}
+                                                                </div>
+                                                                <div className="col-md-2">
+                                                                    <label className="form-label form-label-sm">Partijos Nr.</label>
+                                                                    <input type="text" className="form-control form-control-sm"
+                                                                           value={b.batch_number}
+                                                                           onChange={(e) => handleBatchChange(vIdx, bIdx, 'batch_number', e.target.value)}
+                                                                           placeholder="BATCH-001" />
+                                                                </div>
+                                                                <div className="col-md-2">
+                                                                    <label className="form-label form-label-sm">Gavimo data</label>
+                                                                    <input type="date" className="form-control form-control-sm"
+                                                                           value={b.received_date}
+                                                                           onChange={(e) => handleBatchChange(vIdx, bIdx, 'received_date', e.target.value)} />
+                                                                </div>
+                                                                <div className="col-md-2">
+                                                                    <label className="form-label form-label-sm">Galioja iki</label>
+                                                                    <input type="date" className="form-control form-control-sm"
+                                                                           value={b.expiration_date}
+                                                                           onChange={(e) => handleBatchChange(vIdx, bIdx, 'expiration_date', e.target.value)} />
+                                                                </div>
+                                                                <div className="col-md-4">
+                                                                    <label className="form-label form-label-sm">Šaltinis / Pastabos</label>
+                                                                    <input type="text" className="form-control form-control-sm"
+                                                                           value={b.source_reference}
+                                                                           onChange={(e) => handleBatchChange(vIdx, bIdx, 'source_reference', e.target.value)}
+                                                                           placeholder="Sąskaita, Excel..." />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
                             </>
                         )}
                     </div>
 
-                    {/* Footer */}
                     <div className="modal-footer">
-                        <button type="button" className="btn btn-secondary" onClick={onClose}>
-                            Atšaukti
-                        </button>
-
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>Atšaukti</button>
                         {step > 1 && (
-                            <button
-                                type="button"
-                                className="btn btn-outline-secondary"
-                                onClick={() => setStep(s => s - 1)}
-                            >
+                            <button type="button" className="btn btn-outline-secondary"
+                                    onClick={() => setStep(s => s - 1)}>
                                 ← Atgal
                             </button>
                         )}
-
-                        {/* Paskutinis žingsnis arba redagavimas */}
                         {(step === totalSteps || isEdit) ? (
-                            <button
-                                className="btn btn-success"
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                            >
+                            <button className="btn btn-success" onClick={handleSubmit} disabled={submitting}>
                                 {submitting ? 'Saugoma...' : isEdit ? 'Išsaugoti' : 'Sukurti viską'}
                             </button>
                         ) : (
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => {
-                                    if (step === 1 && !validateStep1()) return;
-                                    if (step === 2 && !validateStep2()) return;
-                                    setStep(s => s + 1);
-                                }}
-                            >
+                            <button className="btn btn-primary" onClick={() => {
+                                if (step === 1 && !validateStep1()) return;
+                                if (step === 2 && !validateStep2()) return;
+                                setStep(s => s + 1);
+                            }}>
                                 Toliau →
                             </button>
                         )}
                     </div>
-
                 </div>
             </div>
         </div>
